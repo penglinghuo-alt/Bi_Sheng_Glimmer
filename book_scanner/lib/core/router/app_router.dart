@@ -9,13 +9,18 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 
+final _authRedirectNotifier = ValueNotifier<AuthStatus>(AuthStatus.unauthenticated);
+
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
+  _authRedirectNotifier.value = authState.status;
 
   return GoRouter(
+    refreshListenable: _authRedirectNotifier,
     initialLocation: '/login',
     redirect: (context, state) {
-      final isAuth = authState.status == AuthStatus.authenticated;
+      final status = _authRedirectNotifier.value;
+      final isAuth = status == AuthStatus.authenticated;
       final isLoginRoute = state.uri.toString() == '/login';
       final isRegisterRoute = state.uri.toString() == '/register';
 

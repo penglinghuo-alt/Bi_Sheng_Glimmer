@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isDarkMode = false;
   bool _autoSave = true;
   bool _highQuality = false;
@@ -32,6 +34,8 @@ class _SettingsPageState extends State<SettingsPage> {
             SliverToBoxAdapter(child: _buildPrintingSection(context)),
             SliverToBoxAdapter(child: _buildSectionLabel(context, 'General')),
             SliverToBoxAdapter(child: _buildGeneralSection(context)),
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+            SliverToBoxAdapter(child: _buildLogoutButton()),
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
@@ -383,6 +387,30 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () {
+            ref.read(authProvider.notifier).logout();
+          },
+          icon: const Icon(Icons.logout_rounded, size: 20),
+          label: const Text('Log Out'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            side: BorderSide(color: AppColors.error.withValues(alpha: 0.5)),
+            foregroundColor: AppColors.error,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

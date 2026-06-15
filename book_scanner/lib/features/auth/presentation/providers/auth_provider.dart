@@ -37,7 +37,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> login(String email, String password) async {
     state = state.copyWith(status: AuthStatus.loading, clearError: true);
 
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 600));
 
     if (email.isEmpty || password.isEmpty) {
       state = state.copyWith(
