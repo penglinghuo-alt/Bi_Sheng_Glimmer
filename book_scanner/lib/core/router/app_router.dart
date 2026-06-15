@@ -5,11 +5,49 @@ import '../../features/scanner/presentation/pages/scanner_page.dart';
 import '../../features/printer/presentation/pages/printer_page.dart';
 import '../../features/preview/presentation/pages/preview_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authProvider);
+
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/login',
+    redirect: (context, state) {
+      final isAuth = authState.status == AuthStatus.authenticated;
+      final isLoginRoute = state.uri.toString() == '/login';
+      final isRegisterRoute = state.uri.toString() == '/register';
+
+      if (!isAuth && !isLoginRoute && !isRegisterRoute) {
+        return '/login';
+      }
+
+      if (isAuth && (isLoginRoute || isRegisterRoute)) {
+        return '/';
+      }
+
+      return null;
+    },
     routes: [
+      GoRoute(
+        path: '/login',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          child: const LoginPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/register',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          child: const RegisterPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
       ShellRoute(
         builder: (context, state, child) {
           return _AppShell(child: child);

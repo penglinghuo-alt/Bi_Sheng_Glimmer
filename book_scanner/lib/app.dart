@@ -5,10 +5,6 @@ import 'core/router/app_router.dart';
 
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
 
-void main() {
-  runApp(const ProviderScope(child: BookScannerApp()));
-}
-
 class BookScannerApp extends ConsumerStatefulWidget {
   const BookScannerApp({super.key});
 
@@ -42,14 +38,6 @@ class _BookScannerAppState extends ConsumerState<BookScannerApp>
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
       routerConfig: router,
-      builder: (context, child) {
-        return AnimatedTheme(
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-          data: themeMode == ThemeMode.dark ? AppTheme.dark() : AppTheme.light(),
-          child: child!,
-        );
-      },
     );
   }
 }
