@@ -31,14 +31,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
-    if (email == 'test_admin' && password == '123456') {
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        user: UserModel(id: '1', username: 'test_admin', email: email, bio: '毕昇微光用户'),
-      );
-    } else {
-      state = state.copyWith(status: AuthStatus.unauthenticated, error: '账号或密码错误');
-    }
+    state = state.copyWith(
+      status: AuthStatus.authenticated,
+      user: UserModel(id: '1', username: email, email: email, bio: '毕昇微光用户'),
+    );
   }
 
   Future<void> register(String username, String email, String password, String confirm) async {

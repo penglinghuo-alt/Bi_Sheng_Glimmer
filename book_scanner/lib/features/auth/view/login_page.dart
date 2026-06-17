@@ -36,9 +36,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   }
 
   void _login() {
-    if (_formKey.currentState!.validate()) {
-      ref.read(authProvider.notifier).login(_emailCtrl.text.trim(), _pwdCtrl.text.trim());
-    }
+    ref.read(authProvider.notifier).login(_emailCtrl.text.trim(), _pwdCtrl.text.trim());
   }
 
   @override
