@@ -37,7 +37,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
 
   void _login() {
     if (_formKey.currentState!.validate()) {
-      ref.read(authProvider.notifier).login(_emailCtrl.text.trim(), _pwdCtrl.text);
+      ref.read(authProvider.notifier).login(_emailCtrl.text.trim(), _pwdCtrl.text.trim());
     }
   }
 
@@ -167,30 +167,31 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
 
   Widget _loginBtn(ThemeData theme, bool isDark, AuthState authState) {
     final loading = authState.status == AuthStatus.loading;
-    return SizedBox(
-      width: double.infinity,
-      child: Semantics(
-        button: true, label: '登录',
-        child: Material(
-          borderRadius: BorderRadius.circular(16),
-          elevation: isDark ? 0 : 2,
-          shadowColor: AppColors.primary.withValues(alpha: 0.3),
-          child: InkWell(
-            onTap: loading ? null : _login,
-            borderRadius: BorderRadius.circular(16),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              height: 56,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(colors: [AppColors.primary, Color(0xFFFF6B35)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              ),
-              child: Center(
-                child: loading
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                    : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.login_rounded, color: Colors.white, size: 20), SizedBox(width: 10), Text('登录', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))]),
-              ),
-            ),
+    return Semantics(
+      button: true, label: '登录',
+      child: GestureDetector(
+        onTap: loading ? null : _login,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          height: 56,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: loading ? theme.colorScheme.primary.withValues(alpha: 0.7) : theme.colorScheme.primary,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1),
+            boxShadow: [
+              BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.25), blurRadius: 16, offset: const Offset(0, 6)),
+              BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Center(
+            child: loading
+                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
+                : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text('登录系统', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15, letterSpacing: 0.8)),
+                  ]),
           ),
         ),
       ),
