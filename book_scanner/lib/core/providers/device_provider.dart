@@ -67,6 +67,20 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
     _listenToHardware();
   }
 
+  Future<void> initialize() async {
+    state = state.copyWith(
+      status: DeviceStatus.initializing,
+      statusMessage: '正在初始化设备...',
+    );
+
+    await _hardwareManager.initialize();
+
+    state = state.copyWith(
+      status: DeviceStatus.initialized,
+      statusMessage: '设备就绪，可以开始打印',
+    );
+  }
+
   Future<void> disconnect() async {
     _statusSub?.cancel();
     await _hardwareManager.disconnect();

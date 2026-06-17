@@ -29,6 +29,16 @@ class BleCommService implements IHardwareComm {
   }
 
   @override
+  Future<bool> initialize() async {
+    Logger.info('[BLE] Initializing device...');
+    _statusController.add(jsonEncode({'status': 'initializing'}));
+    await Future.delayed(const Duration(seconds: 2));
+    _statusController.add(jsonEncode({'status': 'initialized'}));
+    Logger.info('[BLE] Device initialized successfully');
+    return true;
+  }
+
+  @override
   Future<void> startScanAndPrint() async {
     Logger.info('[BLE] Starting scan and print');
     _statusController.add(jsonEncode({'status': 'working', 'step': 'capturing'}));

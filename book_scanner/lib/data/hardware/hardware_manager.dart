@@ -24,6 +24,10 @@ class HardwareManager {
     Logger.info('[HardwareManager] Switched to ${useWifi ? "WiFi" : "BLE"} mode');
   }
 
+  Future<void> initialize() async {
+    await _currentComm?.initialize();
+  }
+
   Future<bool> connect(String deviceIdOrIp) async {
     switchMode(_useWifi);
     return await _currentComm!.connect(deviceIdOrIp);

@@ -2,6 +2,8 @@ enum DeviceStatus {
   disconnected,
   connecting,
   connected,
+  initializing,
+  initialized,
   working,
   printing,
   error,

@@ -4,6 +4,7 @@ abstract class IHardwareComm {
   Future<bool> connect(String deviceIdOrIp);
   Future<void> disconnect();
 
+  Future<bool> initialize();
   Future<void> startScanAndPrint();
   Future<void> stopAll();
   Future<void> nextPaperReady();

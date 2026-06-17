@@ -29,6 +29,16 @@ class WifiCommService implements IHardwareComm {
   }
 
   @override
+  Future<bool> initialize() async {
+    Logger.info('[WiFi] Initializing device...');
+    _statusController.add(jsonEncode({'status': 'initializing'}));
+    await Future.delayed(const Duration(seconds: 2));
+    _statusController.add(jsonEncode({'status': 'initialized'}));
+    Logger.info('[WiFi] Device initialized successfully');
+    return true;
+  }
+
+  @override
   Future<void> startScanAndPrint() async {
     Logger.info('[WiFi] Starting scan and print');
     _statusController.add(jsonEncode({'status': 'working', 'step': 'capturing'}));

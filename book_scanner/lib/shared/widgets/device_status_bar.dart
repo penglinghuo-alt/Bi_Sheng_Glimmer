@@ -26,6 +26,16 @@ class DeviceStatusBar extends ConsumerWidget {
         statusIcon = Icons.sync_rounded;
         label = '连接中...';
         break;
+      case DeviceStatus.initializing:
+        statusColor = Colors.orange;
+        statusIcon = Icons.settings_rounded;
+        label = '初始化中';
+        break;
+      case DeviceStatus.initialized:
+        statusColor = theme.colorScheme.primary;
+        statusIcon = Icons.check_circle_rounded;
+        label = '已就绪';
+        break;
       case DeviceStatus.working:
         statusColor = theme.colorScheme.tertiary;
         statusIcon = Icons.camera_alt_rounded;
