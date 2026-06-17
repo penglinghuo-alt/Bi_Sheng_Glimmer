@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/route_names.dart';
-import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/view/login_page.dart';
 import '../../features/auth/view/register_page.dart';
 import '../../features/home/view/home_page.dart';
@@ -11,23 +10,19 @@ import '../../features/repository/view/preview_page.dart';
 import '../../features/profile/view/profile_page.dart';
 import '../../features/profile/view/device_manage_page.dart';
 
-final _authRedirect = ValueNotifier<bool>(false);
+final authRedirectNotifier = ValueNotifier<bool>(false);
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
-  final isAuth = authState.status == AuthStatus.authenticated;
-  _authRedirect.value = isAuth;
-
   return GoRouter(
-    refreshListenable: _authRedirect,
+    refreshListenable: authRedirectNotifier,
     initialLocation: RouteNames.login,
     redirect: (context, state) {
-      final auth = _authRedirect.value;
+      final isAuth = authRedirectNotifier.value;
       final loc = state.uri.toString();
       final isAuthRoute = loc == RouteNames.login || loc == RouteNames.register;
 
-      if (!auth && !isAuthRoute) return RouteNames.login;
-      if (auth && isAuthRoute) return RouteNames.home;
+      if (!isAuth && !isAuthRoute) return RouteNames.login;
+      if (isAuth && isAuthRoute) return RouteNames.home;
       return null;
     },
     routes: [
@@ -90,54 +85,44 @@ class _AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final location = GoRouterState.of(context).uri.toString();
+    final loc = GoRouterState.of(context).uri.toString();
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, boxShadow: [BoxShadow(color: theme.shadowColor.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, -4))]),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-              _NavItem(icon: Icons.home_rounded, label: '首页', selected: location == RouteNames.home, onTap: () => context.go(RouteNames.home)),
-              _NavItem(icon: Icons.inventory_2_rounded, label: '存储库', selected: location == RouteNames.repository || location.startsWith('/preview'), onTap: () => context.go(RouteNames.repository)),
-              _NavItem(icon: Icons.person_rounded, label: '我的', selected: location == RouteNames.profile || location == RouteNames.deviceManage, onTap: () => context.go(RouteNames.profile)),
-            ]),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          height: 72,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            boxShadow: [BoxShadow(color: theme.colorScheme.shadow.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, -4))],
           ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+            _navItem(Icons.home_rounded, Icons.home_outlined, '首页', RouteNames.home, loc, context),
+            _navItem(Icons.storage_rounded, Icons.storage_outlined, '存储库', RouteNames.repository, loc, context),
+            _navItem(Icons.person_rounded, Icons.person_outlined, '我的', RouteNames.profile, loc, context),
+          ]),
         ),
       ),
     );
   }
-}
 
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _NavItem({required this.icon, required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Semantics(
-        button: true, label: label, selected: selected,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200), curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? theme.colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-          ),
+  Widget _navItem(IconData filled, IconData outlined, String label, String route, String currentLoc, BuildContext context) {
+    final isActive = currentLoc == route;
+    final color = isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45);
+    return Semantics(
+      button: true, label: label,
+      child: InkWell(
+        onTap: isActive ? null : () => context.go(route),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 24, color: selected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(fontSize: 11, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: selected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+            Semantics(label: label, child: Icon(isActive ? filled : outlined, size: 26, color: color)),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: EdgeInsets.only(top: isActive ? 4 : 6),
+              child: Text(label, style: TextStyle(fontSize: 10, fontWeight: isActive ? FontWeight.w700 : FontWeight.w500, color: color)),
+            ),
           ]),
         ),
       ),
