@@ -1,19 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../data/services/api_client.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
 
-class ProfilePage extends ConsumerWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  final _picker = ImagePicker();
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final authState = ref.watch(authProvider);
-
-    final user = authState.user;
+    final profileState = ref.watch(profileProvider);
+    final user = profileState.user ?? authState.user;
 
     return Scaffold(
       appBar: AppBar(title: const Text('我的'), centerTitle: true),
@@ -22,7 +31,7 @@ class ProfilePage extends ConsumerWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(24),
           child: Column(children: [
-            _profileHeader(theme, ref, user),
+            _profileHeader(theme, user),
             const SizedBox(height: 28),
             _sectionTitle(theme, '设备'),
             const SizedBox(height: 10),
@@ -32,7 +41,7 @@ class ProfilePage extends ConsumerWidget {
             const SizedBox(height: 10),
             _menuTile(theme, Icons.bug_report_rounded, '上传错误日志', '将本地日志打包发送', () => _handleLogUpload(context, ref)),
             const SizedBox(height: 10),
-            _menuTile(theme, Icons.settings_rounded, '设置', '退出登录等', () => _showSettings(context, ref)),
+            _menuTile(theme, Icons.settings_rounded, '退出登录', '退出当前账号', () => _showLogout(context, ref)),
             const SizedBox(height: 32),
           ]),
         ),
@@ -40,7 +49,10 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _profileHeader(ThemeData theme, WidgetRef ref, dynamic user) {
+  Widget _profileHeader(ThemeData theme, dynamic user) {
+    final avatarUrl = user?.avatar;
+    final hasRemoteAvatar = avatarUrl != null && avatarUrl is String && avatarUrl.isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -49,26 +61,131 @@ class ProfilePage extends ConsumerWidget {
       ),
       child: Row(children: [
         GestureDetector(
-          onTap: () {}, // Future: image picker for avatar
+          onTap: () => _pickAvatar(),
           child: Semantics(
-            label: '头像',
-            child: Container(
-              width: 64, height: 64,
+            label: '点击更换头像',
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 72, height: 72,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 3),
+                image: hasRemoteAvatar
+                    ? DecorationImage(
+                        image: NetworkImage(avatarUrl.startsWith('http') ? avatarUrl : '${ApiClient.baseUrl}$avatarUrl'),
+                        fit: BoxFit.cover,
+                        onError: (_, __) {},
+                      )
+                    : null,
               ),
-              child: const Icon(Icons.person_rounded, color: Colors.white, size: 36),
+              child: hasRemoteAvatar
+                  ? null
+                  : const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 30),
             ),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(user?.username ?? '用户', style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          Text(user?.bio ?? '毕昇微光用户', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14)),
+          GestureDetector(
+            onTap: () => _editName(context, user),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Flexible(child: Text(user?.username ?? '用户', style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w800), overflow: TextOverflow.ellipsis)),
+              const SizedBox(width: 6),
+              const Icon(Icons.edit_rounded, color: Colors.white70, size: 18),
+            ]),
+          ),
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: () => _editBio(context, user),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Flexible(child: Text(user?.bio ?? '点击设置个性签名', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13))),
+              const SizedBox(width: 6),
+              const Icon(Icons.edit_rounded, color: Colors.white54, size: 16),
+            ]),
+          ),
         ])),
       ]),
+    );
+  }
+
+  Future<void> _pickAvatar() async {
+    try {
+      final picked = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512, imageQuality: 85);
+      if (picked == null) return;
+
+      if (!mounted) return;
+      await ref.read(profileProvider.notifier).uploadAvatar(picked.path);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请授予相册访问权限'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    }
+  }
+
+  void _editName(BuildContext context, dynamic user) {
+    final ctrl = TextEditingController(text: user?.username ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('修改用户名'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: 20,
+          decoration: const InputDecoration(hintText: '请输入新的用户名'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () async {
+              final name = ctrl.text.trim();
+              if (name.isEmpty) return;
+              Navigator.pop(ctx);
+              await ref.read(profileProvider.notifier).updateUsername(name);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('用户名已更新'), behavior: SnackBarBehavior.floating));
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editBio(BuildContext context, dynamic user) {
+    final ctrl = TextEditingController(text: user?.bio ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('修改个性签名'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: 50,
+          maxLines: 2,
+          decoration: const InputDecoration(hintText: '请输入个性签名'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () async {
+              final bio = ctrl.text.trim();
+              Navigator.pop(ctx);
+              await ref.read(profileProvider.notifier).updateBio(bio);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('签名已更新'), behavior: SnackBarBehavior.floating));
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -117,7 +234,7 @@ class ProfilePage extends ConsumerWidget {
     }
   }
 
-  void _showSettings(BuildContext context, WidgetRef ref) {
+  void _showLogout(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,

@@ -80,11 +80,20 @@ class ApiClient {
     return res.data;
   }
 
-  Future<Map<String, dynamic>> updateProfile({String? avatar, String? bio}) async {
+  Future<Map<String, dynamic>> updateProfile({String? username, String? avatar, String? bio}) async {
     final res = await _dio.put('/api/auth/profile', data: {
+      if (username != null) 'username': username,
       if (avatar != null) 'avatar': avatar,
       if (bio != null) 'bio': bio,
     });
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> uploadAvatar(String filePath) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath),
+    });
+    final res = await _dio.post('/api/auth/avatar', data: formData);
     return res.data;
   }
 

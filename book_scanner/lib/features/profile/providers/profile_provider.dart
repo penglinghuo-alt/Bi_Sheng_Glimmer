@@ -6,14 +6,16 @@ import '../../../core/utils/logger.dart';
 class ProfileState {
   final UserModel? user;
   final bool isLogUploading;
+  final bool isSaving;
   final String? error;
 
-  const ProfileState({this.user, this.isLogUploading = false, this.error});
+  const ProfileState({this.user, this.isLogUploading = false, this.isSaving = false, this.error});
 
-  ProfileState copyWith({UserModel? user, bool? isLogUploading, String? error, bool clearError = false}) {
+  ProfileState copyWith({UserModel? user, bool? isLogUploading, bool? isSaving, String? error, bool clearError = false}) {
     return ProfileState(
       user: user ?? this.user,
       isLogUploading: isLogUploading ?? this.isLogUploading,
+      isSaving: isSaving ?? this.isSaving,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -31,21 +33,33 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     } catch (_) {}
   }
 
-  Future<void> updateAvatar(String avatar) async {
+  Future<void> updateUsername(String username) async {
+    state = state.copyWith(isSaving: true, clearError: true);
     try {
-      final data = await _api.updateProfile(avatar: avatar);
-      state = state.copyWith(user: UserModel.fromJson(data));
+      final data = await _api.updateProfile(username: username);
+      state = state.copyWith(user: UserModel.fromJson(data), isSaving: false);
     } catch (e) {
-      state = state.copyWith(error: '更新头像失败');
+      state = state.copyWith(isSaving: false, error: '更新用户名失败');
     }
   }
 
   Future<void> updateBio(String bio) async {
+    state = state.copyWith(isSaving: true, clearError: true);
     try {
       final data = await _api.updateProfile(bio: bio);
-      state = state.copyWith(user: UserModel.fromJson(data));
+      state = state.copyWith(user: UserModel.fromJson(data), isSaving: false);
     } catch (e) {
-      state = state.copyWith(error: '更新签名失败');
+      state = state.copyWith(isSaving: false, error: '更新签名失败');
+    }
+  }
+
+  Future<void> uploadAvatar(String filePath) async {
+    state = state.copyWith(isSaving: true, clearError: true);
+    try {
+      final data = await _api.uploadAvatar(filePath);
+      state = state.copyWith(user: UserModel.fromJson(data), isSaving: false);
+    } catch (e) {
+      state = state.copyWith(isSaving: false, error: '上传头像失败');
     }
   }
 

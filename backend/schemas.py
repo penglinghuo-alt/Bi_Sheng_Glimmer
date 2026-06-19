@@ -32,6 +32,7 @@ class UserResponse(BaseModel):
 
 
 class ProfileUpdateRequest(BaseModel):
+    username: Optional[str] = None
     avatar: Optional[str] = None
     bio: Optional[str] = None
 

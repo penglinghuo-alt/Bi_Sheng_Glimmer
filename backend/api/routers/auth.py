@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -7,6 +10,9 @@ from schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse, 
 from auth_utils import hash_password, verify_password, create_access_token, generate_id, get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
+
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "avatars")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @router.post("/login", response_model=TokenResponse, summary="用户登录")
@@ -62,12 +68,48 @@ def get_profile(current_user: User = Depends(get_current_user)):
 
 @router.put("/profile", response_model=UserResponse, summary="更新用户信息")
 def update_profile(req: ProfileUpdateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if req.username is not None and req.username != current_user.username:
+        existing = db.query(User).filter(User.username == req.username).first()
+        if existing:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="用户名已被占用")
+        current_user.username = req.username
     if req.avatar is not None:
         current_user.avatar = req.avatar
     if req.bio is not None:
         current_user.bio = req.bio
     db.commit()
     db.refresh(current_user)
+    return UserResponse(
+        id=current_user.id, username=current_user.username, email=current_user.email,
+        avatar=current_user.avatar, bio=current_user.bio, created_at=current_user.created_at,
+    )
+
+
+@router.post("/avatar", response_model=UserResponse, summary="上传头像")
+def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if file.content_type not in ("image/png", "image/jpeg", "image/gif", "image/webp"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="仅支持 PNG/JPG/GIF/WebP 格式")
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else "png"
+    filename = f"{uuid.uuid4().hex}_{current_user.id}.{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+
+    content = file.file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="头像大小不能超过 5MB")
+
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    avatar_url = f"/uploads/avatars/{filename}"
+    current_user.avatar = avatar_url
+    db.commit()
+    db.refresh(current_user)
+
     return UserResponse(
         id=current_user.id, username=current_user.username, email=current_user.email,
         avatar=current_user.avatar, bio=current_user.bio, created_at=current_user.created_at,

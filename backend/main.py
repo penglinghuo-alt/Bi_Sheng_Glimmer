@@ -19,6 +19,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from database import init_db, SessionLocal
@@ -69,6 +70,11 @@ app.include_router(auth.router)
 app.include_router(records.router)
 app.include_router(device.router)
 app.include_router(logs.router)
+
+import os
+uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(os.path.join(uploads_dir, "avatars"), exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 
 @app.get("/", tags=["健康检查"])
