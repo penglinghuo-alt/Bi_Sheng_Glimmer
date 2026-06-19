@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_enums.dart';
-import '../../data/hardware/hardware_manager.dart';
+import '../../data/services/api_client.dart';
 
 class DeviceState {
   final DeviceStatus status;
@@ -36,69 +36,58 @@ class DeviceState {
 }
 
 class DeviceNotifier extends StateNotifier<DeviceState> {
-  final HardwareManager _hardwareManager = HardwareManager();
-  StreamSubscription<String>? _statusSub;
+  final ApiClient _api = ApiClient();
 
   DeviceNotifier() : super(const DeviceState());
 
-  void _listenToHardware() {
-    _statusSub?.cancel();
-    _statusSub = _hardwareManager.deviceStatusStream?.listen((data) {
-      // Parse JSON status from hardware
-      // In production, parse real status data here
-    });
-  }
-
   Future<void> connect(String deviceId, {bool useWifi = false}) async {
-    _hardwareManager.switchMode(useWifi);
-    state = state.copyWith(
-      status: DeviceStatus.connecting,
-      statusMessage: '连接中...',
-    );
-
-    await _hardwareManager.connect(deviceId);
-
-    state = state.copyWith(
-      status: DeviceStatus.connected,
-      statusMessage: '已连接',
-      connectedDeviceId: deviceId,
-      useWifi: useWifi,
-    );
-    _listenToHardware();
-  }
-
-  Future<void> initialize() async {
-    state = state.copyWith(
-      status: DeviceStatus.initializing,
-      statusMessage: '正在初始化设备...',
-    );
-
-    await _hardwareManager.initialize();
-
-    state = state.copyWith(
-      status: DeviceStatus.initialized,
-      statusMessage: '设备就绪，可以开始打印',
-    );
+    state = state.copyWith(status: DeviceStatus.connecting, statusMessage: '连接中...');
+    try {
+      await _api.connectDevice(deviceId, useWifi: useWifi);
+      state = state.copyWith(
+        status: DeviceStatus.connected,
+        statusMessage: '已连接',
+        connectedDeviceId: deviceId,
+        useWifi: useWifi,
+      );
+    } catch (e) {
+      state = state.copyWith(status: DeviceStatus.error, statusMessage: '连接失败');
+    }
   }
 
   Future<void> disconnect() async {
-    _statusSub?.cancel();
-    await _hardwareManager.disconnect();
+    try {
+      await _api.disconnectDevice();
+    } catch (_) {}
     state = const DeviceState();
   }
 
+  Future<void> initialize() async {
+    state = state.copyWith(status: DeviceStatus.initializing, statusMessage: '正在初始化设备...');
+    try {
+      final res = await _api.initializeDevice();
+      if (res['success'] == true) {
+        state = state.copyWith(status: DeviceStatus.initialized, statusMessage: '设备就绪，可以开始打印');
+      } else {
+        state = state.copyWith(status: DeviceStatus.error, statusMessage: '初始化失败');
+      }
+    } catch (e) {
+      state = state.copyWith(status: DeviceStatus.error, statusMessage: '初始化失败，请检查网络');
+    }
+  }
+
   Future<void> startPrintJob() async {
-    await _hardwareManager.startScanAndPrint();
+    try {
+      await _api.startPrint();
+    } catch (_) {}
     state = state.copyWith(status: DeviceStatus.working, currentStep: PrintStep.turningPage);
   }
 
   Future<void> emergencyStop() async {
-    await _hardwareManager.emergencyStop();
-    state = state.copyWith(
-      status: DeviceStatus.connected,
-      currentStep: PrintStep.stopped,
-      statusMessage: '已终止',
-    );
+    try {
+      await _api.stopPrint();
+    } catch (_) {}
+    state = state.copyWith(status: DeviceStatus.connected, currentStep: PrintStep.stopped, statusMessage: '已终止');
   }
 
   void setSimulatedStep(PrintStep step) {
@@ -106,26 +95,14 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
   }
 
   void simulatePaperDone() {
-    state = state.copyWith(
-      status: DeviceStatus.connected,
-      currentStep: PrintStep.completed,
-      statusMessage: '请更换盲文纸',
-    );
+    state = state.copyWith(status: DeviceStatus.connected, currentStep: PrintStep.completed, statusMessage: '请更换盲文纸');
   }
 
   Future<void> confirmPaperReady() async {
-    await _hardwareManager.nextPaperReady();
-    state = state.copyWith(
-      status: DeviceStatus.working,
-      currentStep: PrintStep.printing,
-      statusMessage: '打印中...',
-    );
-  }
-
-  @override
-  void dispose() {
-    _statusSub?.cancel();
-    super.dispose();
+    try {
+      await _api.paperReady();
+    } catch (_) {}
+    state = state.copyWith(status: DeviceStatus.working, currentStep: PrintStep.printing, statusMessage: '打印中...');
   }
 }
 

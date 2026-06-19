@@ -1,24 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../data/models/braille_record.dart';
 import '../../../../shared/widgets/accessible_button.dart';
 import '../providers/repo_provider.dart';
 
-class PreviewPage extends ConsumerWidget {
+class PreviewPage extends ConsumerStatefulWidget {
   final String recordId;
 
   const PreviewPage({super.key, required this.recordId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final record = ref.read(repoProvider.notifier).getRecord(recordId);
+  ConsumerState<PreviewPage> createState() => _PreviewPageState();
+}
 
-    if (record == null) {
+class _PreviewPageState extends ConsumerState<PreviewPage> {
+  BrailleRecord? _record;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final record = await ref.read(repoProvider.notifier).getRecord(widget.recordId);
+    if (mounted) {
+      setState(() {
+        _record = record;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('预览')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_record == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('预览')),
         body: const Center(child: Text('记录不存在')),
       );
     }
+
+    final record = _record!;
 
     return Scaffold(
       appBar: AppBar(title: Text(record.title), centerTitle: true),
@@ -49,7 +82,7 @@ class PreviewPage extends ConsumerWidget {
     );
   }
 
-  Widget _infoCard(ThemeData theme, dynamic record) {
+  Widget _infoCard(ThemeData theme, BrailleRecord record) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -85,7 +118,7 @@ class PreviewPage extends ConsumerWidget {
     );
   }
 
-  Widget _dotMatrixPreview(ThemeData theme, dynamic record) {
+  Widget _dotMatrixPreview(ThemeData theme, BrailleRecord record) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

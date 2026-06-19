@@ -31,6 +31,7 @@ dependencies:
   shared_preferences: ^2.3.4
 
   # Networking
+  dio: ^5.4.1
   web_socket_channel: ^3.0.2
 
   # UI Enhancements
