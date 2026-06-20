@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://119.91.119.89:8001';
+  static const String baseUrl = 'https://8001-5c23d2981b81e3e6.monkeycode-ai.online';
 
   static final ApiClient _instance = ApiClient._();
   factory ApiClient() => _instance;

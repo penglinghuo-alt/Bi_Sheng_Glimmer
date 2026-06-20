@@ -17,7 +17,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 security = HTTPBearer()
 
 
