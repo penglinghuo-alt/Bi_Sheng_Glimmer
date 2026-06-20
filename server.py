@@ -4,16 +4,18 @@ import urllib.error
 import os
 
 BACKEND = 'http://127.0.0.1:8001'
-WEB_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build', 'web')
+WEB_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'book_scanner', 'build', 'web')
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=WEB_ROOT, **kwargs)
 
     def do_GET(self):
-        if self.path.startswith('/api/') or self.path == '/uploads/':
+        if self.path.startswith('/api/') or self.path.startswith('/uploads/'):
             self._proxy('GET')
         else:
+            # SPA: serve index.html for all non-API routes
+            self.path = '/index.html'
             super().do_GET()
 
     def do_POST(self):
