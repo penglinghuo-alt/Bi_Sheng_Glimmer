@@ -2,9 +2,12 @@ import http.server
 import urllib.request
 import urllib.error
 import os
+import re
 
 BACKEND = 'http://127.0.0.1:8001'
 WEB_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'book_scanner', 'build', 'web')
+
+STATIC_EXT = re.compile(r'\.(js|json|wasm|ttf|otf|woff2?|css|png|jpg|jpeg|gif|svg|ico|map|dart)$')
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -13,8 +16,11 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/api/') or self.path.startswith('/uploads/'):
             self._proxy('GET')
+        elif STATIC_EXT.search(self.path):
+            super().do_GET()
+        elif self.path == '/' or self.path == '/index.html':
+            super().do_GET()
         else:
-            # SPA: serve index.html for all non-API routes
             self.path = '/index.html'
             super().do_GET()
 
