@@ -4,7 +4,7 @@ import urllib.error
 import os
 import re
 
-BACKEND = 'http://127.0.0.1:8001'
+BACKEND = 'http://119.91.119.89:9000'
 WEB_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'book_scanner', 'build', 'web')
 
 STATIC_EXT = re.compile(r'\.(js|json|wasm|ttf|otf|woff2?|css|png|jpg|jpeg|gif|svg|ico|map|dart)$')
@@ -85,5 +85,7 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         pass  # silent
 
 if __name__ == '__main__':
+    import sys
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
     print(f'[Server] Serving {WEB_ROOT} + proxy /api/* -> {BACKEND}')
-    http.server.HTTPServer(('0.0.0.0', 8000), ProxyHandler).serve_forever()
+    http.server.HTTPServer(('0.0.0.0', port), ProxyHandler).serve_forever()
