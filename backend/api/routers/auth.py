@@ -11,7 +11,7 @@ from auth_utils import hash_password, verify_password, create_access_token, gene
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "avatars")
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "uploads", "avatars")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
