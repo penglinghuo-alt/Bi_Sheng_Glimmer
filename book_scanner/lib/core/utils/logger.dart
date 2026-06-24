@@ -6,6 +6,11 @@ class Logger {
     _logs.add(entry);
   }
 
+  static void debug(String message) {
+    final entry = '[DEBUG] ${DateTime.now().toIso8601String()} $message';
+    _logs.add(entry);
+  }
+
   static void warn(String message) {
     final entry = '[WARN] ${DateTime.now().toIso8601String()} $message';
     _logs.add(entry);

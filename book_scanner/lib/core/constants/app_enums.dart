@@ -6,6 +6,8 @@ enum DeviceStatus {
   initialized,
   working,
   printing,
+  paused,
+  stopped,
   error,
 }
 
@@ -20,4 +22,6 @@ enum PrintStep {
   printing,
   completed,
   stopped,
+  paused,
+  error,
 }

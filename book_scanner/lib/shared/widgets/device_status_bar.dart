@@ -46,6 +46,16 @@ class DeviceStatusBar extends ConsumerWidget {
         statusIcon = Icons.print_rounded;
         label = '打印中';
         break;
+      case DeviceStatus.paused:
+        statusColor = Colors.orange;
+        statusIcon = Icons.pause_circle_rounded;
+        label = '已暂停';
+        break;
+      case DeviceStatus.stopped:
+        statusColor = Colors.red;
+        statusIcon = Icons.stop_circle_rounded;
+        label = '已停止';
+        break;
       case DeviceStatus.error:
         statusColor = theme.colorScheme.error;
         statusIcon = Icons.error_outline_rounded;

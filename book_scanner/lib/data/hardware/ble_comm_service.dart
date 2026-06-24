@@ -1,64 +1,76 @@
 import 'dart:async';
-import 'dart:convert';
 import 'comm_interface.dart';
+import 'comm_protocol.dart';
+import '../../../core/constants/hardware_config.dart';
 import '../../../core/utils/logger.dart';
 
 class BleCommService implements IHardwareComm {
   String? _deviceId;
-  final StreamController<String> _statusController = StreamController<String>.broadcast();
+  final StreamController<HardwareMessage> _statusController = StreamController<HardwareMessage>.broadcast();
 
   @override
-  Stream<String> get deviceStatusStream => _statusController.stream;
+  Stream<HardwareMessage> get deviceStatusStream => _statusController.stream;
 
   @override
-  Future<bool> connect(String deviceIdOrIp) async {
-    _deviceId = deviceIdOrIp;
-    Logger.info('[BLE] Connecting to device: $deviceIdOrIp');
+  Future<bool> connect(String deviceIdOrAddress) async {
+    _deviceId = deviceIdOrAddress;
+    Logger.info('[BLE] Connecting to: $deviceIdOrAddress');
+    // TODO: flutter_blue_plus 连接设备
+    //   1. 扫描设备 → 连接 GATT
+    //   2. 订阅 characteristic notify → 解析 JSON → _statusController.add()
     await Future.delayed(const Duration(seconds: 1));
-    _statusController.add(jsonEncode({'status': 'connected', 'device': _deviceId}));
-    Logger.info('[BLE] Connected successfully');
+    _statusController.add(const HardwareMessage(type: HardwareConfig.statusConnected, payload: {}));
+    Logger.info('[BLE] Connected');
     return true;
   }
 
   @override
   Future<void> disconnect() async {
     Logger.info('[BLE] Disconnecting');
+    // TODO: 断开 GATT
     await Future.delayed(const Duration(milliseconds: 300));
-    _statusController.add(jsonEncode({'status': 'disconnected'}));
     _deviceId = null;
   }
 
   @override
   Future<bool> initialize() async {
     Logger.info('[BLE] Initializing device...');
-    _statusController.add(jsonEncode({'status': 'initializing'}));
-    await Future.delayed(const Duration(seconds: 2));
-    _statusController.add(jsonEncode({'status': 'initialized'}));
-    Logger.info('[BLE] Device initialized successfully');
+    // TODO: 发送初始化指令
+    await Future.delayed(const Duration(seconds: 1));
+    _statusController.add(HardwareMessage(
+      type: HardwareConfig.statusIdle,
+      payload: {'message': '设备就绪'},
+    ));
+    Logger.info('[BLE] Initialized');
     return true;
   }
 
   @override
-  Future<void> startScanAndPrint() async {
-    Logger.info('[BLE] Starting scan and print');
-    _statusController.add(jsonEncode({'status': 'working', 'step': 'capturing'}));
+  Future<void> startPrint() async {
+    Logger.info('[BLE] Start print');
+    _write(CmdStartPrint().toJson());
   }
 
   @override
-  Future<void> stopAll() async {
+  Future<void> pausePrint() async {
+    Logger.info('[BLE] Pause print');
+    _write(CmdPausePrint().toJson());
+  }
+
+  @override
+  Future<void> stopPrint() async {
+    Logger.info('[BLE] Stop print');
+    _write(CmdStopPrint().toJson());
+  }
+
+  @override
+  Future<void> emergencyStop() async {
     Logger.info('[BLE] Emergency stop');
-    _statusController.add(jsonEncode({'status': 'stopped'}));
+    _write(CmdEmergencyStop().toJson());
   }
 
-  @override
-  Future<void> nextPaperReady() async {
-    Logger.info('[BLE] Next paper ready');
-    _statusController.add(jsonEncode({'status': 'working', 'step': 'printing'}));
-  }
-
-  @override
-  Future<void> sendCommand(String command, {Map<String, dynamic>? params}) async {
-    Logger.info('[BLE] Sending command: $command');
-    _statusController.add(jsonEncode({'command': command, 'params': params}));
+  void _write(Map<String, dynamic> message) {
+    // TODO: characteristic.write(jsonEncode(message))
+    Logger.debug('[BLE] Write → ${message['type']}');
   }
 }
