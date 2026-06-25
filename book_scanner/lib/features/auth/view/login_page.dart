@@ -185,7 +185,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
           child: Center(
             child: loading
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                : const Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
                     SizedBox(width: 8),
                     Text('登录系统', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15, letterSpacing: 0.8)),

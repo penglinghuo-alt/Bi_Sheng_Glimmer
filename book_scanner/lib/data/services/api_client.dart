@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
-  static const String baseUrl = '';
+  static const String baseUrl = 'http://119.91.119.89:9000';
 
   static final ApiClient _instance = ApiClient._();
   factory ApiClient() => _instance;
