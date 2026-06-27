@@ -1,7 +1,9 @@
 import os
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -11,7 +13,7 @@ from auth_utils import hash_password, verify_password, create_access_token, gene
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "uploads", "avatars")
+UPLOAD_DIR = str(Path(__file__).resolve().parent.parent.parent / "uploads" / "avatars")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
@@ -114,3 +116,14 @@ def upload_avatar(
         id=current_user.id, username=current_user.username, email=current_user.email,
         avatar=current_user.avatar, bio=current_user.bio, created_at=current_user.created_at,
     )
+
+
+avatar_router = APIRouter()
+
+
+@avatar_router.get("/uploads/avatars/{filename}")
+async def serve_avatar(filename: str):
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="头像不存在")
+    return FileResponse(filepath)

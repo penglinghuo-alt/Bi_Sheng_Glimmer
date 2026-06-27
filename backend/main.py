@@ -17,8 +17,9 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
@@ -26,6 +27,7 @@ from database import init_db, SessionLocal
 from models import User
 from auth_utils import hash_password, generate_id
 from api.routers import auth, records, device, logs
+from api.routers.auth import avatar_router
 
 
 @asynccontextmanager
@@ -70,6 +72,7 @@ app.include_router(auth.router)
 app.include_router(records.router)
 app.include_router(device.router)
 app.include_router(logs.router)
+app.include_router(avatar_router)
 
 import os
 uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
@@ -85,3 +88,11 @@ def root():
 @app.get("/api/health", tags=["健康检查"])
 def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/uploads/avatars/{filename}")
+async def serve_avatar(filename: str):
+    filepath = os.path.join(uploads_dir, "avatars", filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="头像不存在")
+    return FileResponse(filepath)

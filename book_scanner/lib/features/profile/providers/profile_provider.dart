@@ -53,10 +53,10 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     }
   }
 
-  Future<void> uploadAvatar(String filePath) async {
+  Future<void> uploadAvatar(String filePath, {List<int>? bytes}) async {
     state = state.copyWith(isSaving: true, clearError: true);
     try {
-      final data = await _api.uploadAvatar(filePath);
+      final data = await _api.uploadAvatar(filePath, bytes: bytes);
       state = state.copyWith(user: UserModel.fromJson(data), isSaving: false);
     } catch (e) {
       state = state.copyWith(isSaving: false, error: '上传头像失败');

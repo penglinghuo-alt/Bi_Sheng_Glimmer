@@ -75,7 +75,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ? DecorationImage(
                         image: NetworkImage(avatarUrl.startsWith('http') ? avatarUrl : '${ApiClient.baseUrl}$avatarUrl'),
                         fit: BoxFit.cover,
-                        onError: (_, __) {},
+                        onError: (exception, stackTrace) {
+                          debugPrint('Avatar load failed: $exception');
+                        },
                       )
                     : null,
               ),
@@ -115,7 +117,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (picked == null) return;
 
       if (!mounted) return;
-      await ref.read(profileProvider.notifier).uploadAvatar(picked.path);
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      await ref.read(profileProvider.notifier).uploadAvatar(picked.path, bytes: bytes);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

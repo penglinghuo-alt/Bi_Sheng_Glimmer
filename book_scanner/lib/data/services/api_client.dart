@@ -89,9 +89,11 @@ class ApiClient {
     return res.data;
   }
 
-  Future<Map<String, dynamic>> uploadAvatar(String filePath) async {
+  Future<Map<String, dynamic>> uploadAvatar(String filePath, {List<int>? bytes}) async {
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(filePath),
+      'file': bytes != null
+          ? MultipartFile.fromBytes(bytes, filename: 'avatar.png')
+          : await MultipartFile.fromFile(filePath),
     });
     final res = await _dio.post('/api/auth/avatar', data: formData);
     return res.data;
