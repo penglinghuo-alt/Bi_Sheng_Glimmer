@@ -175,11 +175,11 @@ class HomeNotifier extends StateNotifier<HomeState> {
     final res = '${2000 + _rnd.nextInt(200)}x${1400 + _rnd.nextInt(200)}';
     final entries = [
       _LogEntry('[INFO][camera] 摄像头初始化...', 2000, autoTimestamp: true),
-      _LogEntry('[INFO][camera] 正在拍摄第 $_currentPage 页图像...', 5000, autoTimestamp: true),
-      _LogEntry('[INFO][camera] 图像采集完成，分辨率 $res, 300DPI', 2000, autoTimestamp: true),
-      _LogEntry('[INFO][camera] 图像预处理：去噪、二值化、倾斜校正', 6000, autoTimestamp: true),
+      _LogEntry('[INFO][camera] 正在拍摄第 $_currentPage 页图像...', 8000, autoTimestamp: true),
+      _LogEntry('[INFO][camera] 图像采集完成，分辨率 $res, 300DPI', 3000, autoTimestamp: true),
+      _LogEntry('[INFO][camera] 图像预处理：去噪、二值化、倾斜校正', 8000, autoTimestamp: true),
       _LogEntry('[INFO][camera] 预处理完成', 2000, autoTimestamp: true),
-      _LogEntry('', 3000),
+      _LogEntry('', 4000),
     ];
     _playEntries(entries, onDone: () => _phaseOCR());
   }
