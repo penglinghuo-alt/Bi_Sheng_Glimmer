@@ -6,6 +6,11 @@ class DatabaseHelper {
   DatabaseHelper._();
 
   final List<BrailleRecord> _records = [];
+  final List<void Function()> _listeners = [];
+
+  void addListener(void Function() cb) => _listeners.add(cb);
+  void removeListener(void Function() cb) => _listeners.remove(cb);
+  void _notify() { for (final l in _listeners) { l(); } }
 
   List<BrailleRecord> getRecords({String? search, bool orderByDate = true}) {
     var list = List<BrailleRecord>.from(_records);
@@ -20,16 +25,19 @@ class DatabaseHelper {
 
   void addRecord(BrailleRecord record) {
     _records.add(record);
+    _notify();
   }
 
   void deleteRecord(String id) {
     _records.removeWhere((r) => r.id == id);
+    _notify();
   }
 
   void renameRecord(String id, String newTitle) {
     final idx = _records.indexWhere((r) => r.id == id);
     if (idx != -1) {
       _records[idx] = _records[idx].copyWith(title: newTitle);
+      _notify();
     }
   }
 

@@ -18,15 +18,13 @@ class RepoListPage extends ConsumerWidget {
       body: SafeArea(
         child: Column(children: [
           _searchBar(theme, ref),
-          Expanded(child: state.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : state.records.isEmpty
-              ? _emptyState(theme)
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: state.records.length,
-                  itemBuilder: (_, i) => _recordTile(theme, ref, state.records[i], context),
-                ),
+          Expanded(child: state.records.isEmpty
+            ? _emptyState(theme)
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: state.records.length,
+                itemBuilder: (_, i) => _recordTile(theme, ref, state.records[i], context),
+              ),
           ),
         ]),
       ),

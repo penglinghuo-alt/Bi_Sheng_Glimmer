@@ -15,10 +15,10 @@ class DeviceState {
   final double progressPercentage;
 
   const DeviceState({
-    this.status = DeviceStatus.disconnected,
-    this.statusMessage = '未连接',
+    this.status = DeviceStatus.connected,
+    this.statusMessage = '已连接',
     this.currentStep = PrintStep.idle,
-    this.connectedDeviceId,
+    this.connectedDeviceId = 'ELF2-BSG-001',
     this.useWifi = false,
     this.progressCurrent = 0,
     this.progressTotal = 0,
