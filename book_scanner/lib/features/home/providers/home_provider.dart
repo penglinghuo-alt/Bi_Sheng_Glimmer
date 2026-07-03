@@ -191,8 +191,9 @@ class HomeNotifier extends StateNotifier<HomeState> {
     final regions = 10 + _rnd.nextInt(12);
     final entries = [
       _LogEntry('[INFO][ocr] 开始第 $_currentPage 页 OCR 文字识别...', 2000, autoTimestamp: true),
-      _LogEntry('[INFO][ocr] 加载识别模型: chinese_ocr_v3.pth', 6000, autoTimestamp: true),
-      _LogEntry('[INFO][ocr] 模型加载完成，推理引擎: ONNX Runtime', 2000, autoTimestamp: true),
+      _LogEntry('[INFO][ocr] 加载检测模型: PP-OCRv5_mobile_det.rknn', 3000, autoTimestamp: true),
+      _LogEntry('[INFO][ocr] 加载识别模型: PP-OCRv5_mobile_rec.rknn', 3000, autoTimestamp: true),
+      _LogEntry('[INFO][ocr] 模型加载完成，推理引擎: RKNN (RK3588 NPU)', 2000, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 文字区域检测中...', 5000, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 检测到 $regions 个文字区域', 2000, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 逐区域字符识别中...', 8000, autoTimestamp: true),
