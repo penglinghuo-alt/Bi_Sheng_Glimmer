@@ -189,7 +189,6 @@ class HomeNotifier extends StateNotifier<HomeState> {
     state = state.copyWith(currentStep: PrintStep.recognizing);
     final charCount = 180 + _rnd.nextInt(200);
     final regions = 8 + _rnd.nextInt(10);
-    final confidence = 95.0 + _rnd.nextDouble() * 3.5;
     final entries = [
       _LogEntry('[INFO][ocr] 开始第 $_currentPage 页 OCR 文字识别...', 600, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 加载识别模型: chinese_ocr_v3.pth', 2000, autoTimestamp: true),
@@ -197,11 +196,10 @@ class HomeNotifier extends StateNotifier<HomeState> {
       _LogEntry('[INFO][ocr] 文字区域检测中...', 1500, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 检测到 $regions 个文字区域', 500, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 逐区域字符识别中...', 2500, autoTimestamp: true),
-      _LogEntry('[INFO][ocr] 区域 1-${regions ~/ 3} 识别完成 (进度: 33.3%)', 1500, autoTimestamp: true),
-      _LogEntry('[INFO][ocr] 区域 ${regions ~/ 3 + 1}-${regions * 2 ~/ 3} 识别完成 (进度: 66.7%)', 1500, autoTimestamp: true),
-      _LogEntry('[INFO][ocr] 区域 ${regions * 2 ~/ 3 + 1}-$regions 识别完成 (进度: 100.0%)', 1000, autoTimestamp: true),
+      _LogEntry('[INFO][ocr] 区域 1-${regions ~/ 3} 识别完成', 1500, autoTimestamp: true),
+      _LogEntry('[INFO][ocr] 区域 ${regions ~/ 3 + 1}-${regions * 2 ~/ 3} 识别完成', 1500, autoTimestamp: true),
+      _LogEntry('[INFO][ocr] 区域 ${regions * 2 ~/ 3 + 1}-$regions 识别完成', 1000, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 第 $_currentPage 页 OCR 识别完成，共检测 $charCount 个字符', 800, autoTimestamp: true),
-      _LogEntry('[INFO][ocr] 识别置信度: ${confidence.toStringAsFixed(1)}%', 500, autoTimestamp: true),
       _LogEntry('', 2500),
     ];
     _playEntries(entries, onDone: () => _phaseConvert());
@@ -233,22 +231,15 @@ class HomeNotifier extends StateNotifier<HomeState> {
   // ── 打印 ──────────────────────────────────────────
   void _phasePrint() {
     state = state.copyWith(currentStep: PrintStep.printing);
-    final temp1 = '${_rndDec(44, 3)}';
-    final temp2 = '${_rndDec(61, 4)}';
-    final temp3 = '${_rndDec(78, 2)}';
     final totalRows = 25 + _rnd.nextInt(15);
 
     final entries = [
-      _LogEntry('[INFO][printer] 打印头预热中...', 600, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印头温度: ${temp1}°C / 目标 80.0°C', 1500, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印头温度: ${temp2}°C / 目标 80.0°C', 1500, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印头温度: ${temp3}°C，预热完成', 1000, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 开始打印第 $_currentPage 页，总行数: $totalRows', 600, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 1-${totalRows ~/ 5} (进度: 20.0%)', 1200, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 ${totalRows ~/ 5 + 1}-${totalRows * 2 ~/ 5} (进度: 40.0%)', 1200, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 ${totalRows * 2 ~/ 5 + 1}-${totalRows * 3 ~/ 5} (进度: 60.0%)', 1200, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 ${totalRows * 3 ~/ 5 + 1}-${totalRows * 4 ~/ 5} (进度: 80.0%)', 1200, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 ${totalRows * 4 ~/ 5 + 1}-$totalRows (进度: 100.0%)', 1200, autoTimestamp: true),
+      _LogEntry('[INFO][printer] 打印头就绪，开始打印第 $_currentPage 页，总行数: $totalRows', 600, autoTimestamp: true),
+      _LogEntry('[INFO][printer] 打印行 1-${totalRows ~/ 5}', 1200, autoTimestamp: true),
+      _LogEntry('[INFO][printer] 打印行 ${totalRows ~/ 5 + 1}-${totalRows * 2 ~/ 5}', 1200, autoTimestamp: true),
+      _LogEntry('[INFO][printer] 打印行 ${totalRows * 2 ~/ 5 + 1}-${totalRows * 3 ~/ 5}', 1200, autoTimestamp: true),
+      _LogEntry('[INFO][printer] 打印行 ${totalRows * 3 ~/ 5 + 1}-${totalRows * 4 ~/ 5}', 1200, autoTimestamp: true),
+      _LogEntry('[INFO][printer] 打印行 ${totalRows * 4 ~/ 5 + 1}-$totalRows', 1200, autoTimestamp: true),
       _LogEntry('[INFO][printer] 第 $_currentPage 页打印完成', 800, autoTimestamp: true),
     ];
     _playEntries(entries, onDone: () {
