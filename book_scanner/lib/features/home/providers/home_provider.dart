@@ -52,41 +52,83 @@ class HomeState {
   }
 }
 
+class _LogEntry {
+  final String message;
+  final int delayMs;
+  const _LogEntry(this.message, this.delayMs);
+}
+
 class HomeNotifier extends StateNotifier<HomeState> {
   final DatabaseHelper _db = DatabaseHelper();
   Timer? _logTimer;
-  Timer? _stepTimer;
-  Timer? _initTimer;
-  int _logIndex = 0;
+  int _currentLogIndex = 0;
   int _jobCounter = 0;
 
-  static const _logMessages = [
-    '初始化扫描头...',
-    '扫描头预热完成，温度 38°C',
-    '步进电机自检通过',
-    '纸张传感器校准成功',
-    '摄像头自动对焦完成',
-    '--- 机器已准备完毕 ---',
-    '检测到纸张，厚度 0.12mm',
-    '开始翻页...',
-    '翻页完成，准备拍照',
-    '正在拍摄图像...',
-    '图像采集完成，分辨率 300DPI',
-    'OCR 文字识别中...',
-    '识别完成，共检测到 248 个字符',
-    '盲文点阵转换处理中...',
-    '点阵映射完成 (40x30)',
-    '正在传输打印数据到硬件...',
-    '打印头预热中，温度升至 80°C',
-    '开始打印第 1 行...',
-    '打印进度: 25%',
-    '打印进度: 50%',
-    '打印进度: 75%',
-    '打印进度: 100%',
-    '当前页打印完成',
-    '纸张传送中...',
-    '机械臂归位完成',
-    '--- 打印任务全部完成 ---',
+  static const _initLogs = [
+    _LogEntry('[2026-07-03 19:46:15][INFO][logger] 日志管理器初始化完成', 200),
+    _LogEntry('[2026-07-03 19:46:15][INFO][main] 系统启动中...', 250),
+    _LogEntry('[2026-07-03 19:46:15][INFO][main] 已启用 mock 串口模式', 300),
+    _LogEntry('[2026-07-03 19:46:15][INFO][init] 系统初始化开始：自动回零', 250),
+    _LogEntry('[2026-07-03 19:46:15][INFO][init] [MOTOR-HOME] 开始Y1/Y2同步回零，目标最小时长=8.0s', 350),
+    _LogEntry('[2026-07-03 19:46:20][INFO][init] [MOTOR-HOME] 回零实际执行4.891s，补足等待3.109s', 300),
+    _LogEntry('[2026-07-03 19:46:23][INFO][init] [MOTOR-HOME] 回零完成: axis=Y1 total=8.000s', 200),
+    _LogEntry('[2026-07-03 19:46:23][INFO][init] [MOTOR-HOME] 回零完成: axis=Y2 total=8.000s', 200),
+    _LogEntry('[2026-07-03 19:46:23][INFO][init] [MOTOR-HOME] 开始X轴回零，目标最小时长=8.0s', 350),
+    _LogEntry('[2026-07-03 19:46:28][INFO][init] [MOTOR-HOME] 回零实际执行4.897s，补足等待3.103s', 300),
+    _LogEntry('[2026-07-03 19:46:31][INFO][init] [MOTOR-HOME] 回零完成: axis=X total=8.000s', 200),
+    _LogEntry('[2026-07-03 19:46:31][INFO][init] 系统初始化完成', 250),
+    _LogEntry('[2026-07-03 19:46:31][INFO][main] 系统初始化（回零）完成', 300),
+    _LogEntry('--- 机器已准备完毕，等待打印任务 ---', 400),
+  ];
+
+  static const _workLogs = [
+    _LogEntry('[19:46:35][INFO][scanner] 纸张传感器触发，检测到纸张', 600),
+    _LogEntry('[19:46:35][INFO][scanner] 纸张厚度: 0.12mm, 材质: 盲文专用纸', 400),
+    _LogEntry('[19:46:36][INFO][scanner] 开始翻页...', 800),
+    _LogEntry('[19:46:37][INFO][scanner] 翻页完成，步进电机到位', 500),
+    _LogEntry('[19:46:38][INFO][camera] 摄像头初始化...', 500),
+    _LogEntry('[19:46:38][INFO][camera] 正在拍摄图像...', 1000),
+    _LogEntry('[19:46:39][INFO][camera] 图像采集完成，分辨率 2048x1536, 300DPI', 600),
+    _LogEntry('[19:46:40][INFO][camera] 图像预处理：去噪、二值化、倾斜校正', 1200),
+    _LogEntry('[19:46:41][INFO][camera] 预处理完成', 400),
+    _LogEntry('', 2500),
+    _LogEntry('[19:46:44][INFO][ocr] 开始 OCR 文字识别...', 500),
+    _LogEntry('[19:46:44][INFO][ocr] 加载识别模型: chinese_ocr_v3.pth', 800),
+    _LogEntry('[19:46:45][INFO][ocr] 模型加载完成，推理引擎: ONNX Runtime', 400),
+    _LogEntry('[19:46:45][INFO][ocr] 文字区域检测中...', 700),
+    _LogEntry('[19:46:46][INFO][ocr] 检测到 12 个文字区域', 400),
+    _LogEntry('[19:46:46][INFO][ocr] 逐区域字符识别中...', 1200),
+    _LogEntry('[19:46:48][INFO][ocr] 区域 1-4 识别完成 (进度: 33%)', 700),
+    _LogEntry('[19:46:49][INFO][ocr] 区域 5-8 识别完成 (进度: 67%)', 700),
+    _LogEntry('[19:46:50][INFO][ocr] 区域 9-12 识别完成 (进度: 100%)', 500),
+    _LogEntry('[19:46:50][INFO][ocr] OCR 识别完成，共检测 248 个字符', 600),
+    _LogEntry('[19:46:50][INFO][ocr] 识别置信度: 97.3%', 400),
+    _LogEntry('', 3000),
+    _LogEntry('[19:46:53][INFO][converter] 开始盲文点阵转换...', 500),
+    _LogEntry('[19:46:53][INFO][converter] 加载盲文对照表: braille_table_v2.json', 600),
+    _LogEntry('[19:46:54][INFO][converter] 文本分段处理中...', 400),
+    _LogEntry('[19:46:54][INFO][converter] 共 3 个段落，逐段转换', 300),
+    _LogEntry('[19:46:55][INFO][converter] 第 1 段转换完成 (40 字符)', 600),
+    _LogEntry('[19:46:56][INFO][converter] 第 2 段转换完成 (82 字符)', 600),
+    _LogEntry('[19:46:57][INFO][converter] 第 3 段转换完成 (126 字符)', 600),
+    _LogEntry('[19:46:57][INFO][converter] 点阵映射完成: 40x30', 400),
+    _LogEntry('[19:46:57][INFO][converter] 盲文转换完成，开始传输数据', 600),
+    _LogEntry('', 2500),
+    _LogEntry('[19:47:00][INFO][printer] 打印头预热中...', 500),
+    _LogEntry('[19:47:01][INFO][printer] 打印头温度: 45°C / 目标 80°C', 700),
+    _LogEntry('[19:47:02][INFO][printer] 打印头温度: 62°C / 目标 80°C', 700),
+    _LogEntry('[19:47:03][INFO][printer] 打印头温度: 78°C，预热完成', 500),
+    _LogEntry('[19:47:03][INFO][printer] 开始打印，总行数: 30', 500),
+    _LogEntry('[19:47:04][INFO][printer] 打印行 1-5 (进度: 17%)', 700),
+    _LogEntry('[19:47:05][INFO][printer] 打印行 6-10 (进度: 33%)', 700),
+    _LogEntry('[19:47:06][INFO][printer] 打印行 11-15 (进度: 50%)', 700),
+    _LogEntry('[19:47:07][INFO][printer] 打印行 16-20 (进度: 67%)', 700),
+    _LogEntry('[19:47:08][INFO][printer] 打印行 21-25 (进度: 83%)', 700),
+    _LogEntry('[19:47:09][INFO][printer] 打印行 26-30 (进度: 100%)', 700),
+    _LogEntry('[19:47:10][INFO][printer] 打印完成', 500),
+    _LogEntry('[19:47:10][INFO][scanner] 纸张传送中...', 800),
+    _LogEntry('[19:47:11][INFO][scanner] 机械臂归位', 600),
+    _LogEntry('[19:47:11][INFO][main] --- 打印任务全部完成 ---', 500),
   ];
 
   HomeNotifier() : super(const HomeState());
@@ -97,47 +139,78 @@ class HomeNotifier extends StateNotifier<HomeState> {
 
   void startWorking() {
     state = state.copyWith(isInitializing: true, showReadyDialog: false, logs: []);
-    _logIndex = 0;
+    _currentLogIndex = 0;
 
-    _initTimer?.cancel();
-    _initTimer = Timer(const Duration(seconds: 3), () {
-      state = state.copyWith(isInitializing: false, showReadyDialog: true);
-      _startInitLogs();
+    _playInitLogs();
+
+    final initDuration = _initLogs.fold<int>(0, (sum, e) => sum + e.delayMs);
+    _logTimer?.cancel();
+    _logTimer = Timer(Duration(milliseconds: initDuration), () {
+      if (mounted) {
+        state = state.copyWith(isInitializing: false, showReadyDialog: true);
+      }
     });
   }
 
-  void _startInitLogs() {
-    final initLogs = _logMessages.sublist(0, 6);
-    for (int i = 0; i < initLogs.length; i++) {
-      Future.delayed(Duration(milliseconds: 400 * i), () {
-        if (mounted) {
-          state = state.copyWith(logs: [...state.logs, initLogs[i]]);
+  void _playInitLogs() {
+    int delay = 0;
+    for (final entry in _initLogs) {
+      delay += entry.delayMs;
+      Future.delayed(Duration(milliseconds: delay), () {
+        if (mounted && entry.message.isNotEmpty) {
+          state = state.copyWith(logs: [...state.logs, entry.message]);
         }
       });
     }
   }
 
   void confirmReady() {
-    state = state.copyWith(showReadyDialog: false, isInitialized: true, isWorking: true);
-    _logIndex = 6;
-    startPrintJob();
-    _startWorkLogs();
+    state = state.copyWith(
+      showReadyDialog: false,
+      isInitialized: true,
+      isWorking: true,
+      currentStep: PrintStep.idle,
+      progress: 0.0,
+    );
+    _playWorkLogs();
     _simulateSteps();
   }
 
-  void _startWorkLogs() {
-    _logTimer?.cancel();
-    _logTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_logIndex < _logMessages.length) {
-        state = state.copyWith(logs: [...state.logs, _logMessages[_logIndex]]);
-        _logIndex++;
-      } else {
-        timer.cancel();
-      }
+  void _playWorkLogs() {
+    int delay = 0;
+    for (final entry in _workLogs) {
+      delay += entry.delayMs;
+      Future.delayed(Duration(milliseconds: delay), () {
+        if (mounted && entry.message.isNotEmpty) {
+          state = state.copyWith(logs: [...state.logs, entry.message]);
+        }
+        if (!mounted) return;
+        switch (entry.message) {
+          case '正在拍摄图像...':
+            updateStep(PrintStep.capturing, 0.10);
+          case '图像采集完成，分辨率 2048x1536, 300DPI':
+            updateStep(PrintStep.capturing, 0.18);
+          case '开始 OCR 文字识别...':
+            updateStep(PrintStep.recognizing, 0.30);
+          case 'OCR 识别完成，共检测 248 个字符':
+            updateStep(PrintStep.recognizing, 0.48);
+          case '开始盲文点阵转换...':
+            updateStep(PrintStep.converting, 0.55);
+          case '点阵映射完成: 40x30':
+            updateStep(PrintStep.converting, 0.70);
+          case '打印头预热中...':
+            updateStep(PrintStep.printing, 0.75);
+          case '打印行 11-15 (进度: 50%)':
+            updateStep(PrintStep.printing, 0.85);
+          case '打印完成':
+            updateStep(PrintStep.printing, 0.95);
+        }
+      });
+    }
+
+    final totalWorkMs = _workLogs.fold<int>(0, (sum, e) => sum + e.delayMs) + 1500;
+    Future.delayed(Duration(milliseconds: totalWorkMs), () {
+      if (mounted) showPaperDialog();
     });
   }
 
@@ -150,8 +223,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void showPaperDialog() {
-    state = state.copyWith(showPaperDialog: true, currentStep: PrintStep.completed);
-    _logTimer?.cancel();
+    state = state.copyWith(showPaperDialog: true, currentStep: PrintStep.completed, progress: 1.0);
   }
 
   void dismissPaperDialog() {
@@ -176,6 +248,8 @@ class HomeNotifier extends StateNotifier<HomeState> {
     );
     _db.addRecord(record);
 
+    _logTimer?.cancel();
+    _currentLogIndex = 0;
     state = state.copyWith(
       showPaperDialog: false,
       isWorking: false,
@@ -198,42 +272,16 @@ class HomeNotifier extends StateNotifier<HomeState> {
     state = state.copyWith(isInitializing: false, isInitialized: false);
   }
 
-  void _simulateSteps() {
-    final steps = [
-      (PrintStep.capturing, 0.15),
-      (PrintStep.capturing, 0.30),
-      (PrintStep.recognizing, 0.45),
-      (PrintStep.converting, 0.60),
-      (PrintStep.converting, 0.75),
-      (PrintStep.printing, 0.85),
-      (PrintStep.printing, 0.95),
-    ];
-
-    for (int i = 0; i < steps.length; i++) {
-      Future.delayed(Duration(seconds: 2 + i * 2), () {
-        if (mounted) {
-          updateStep(steps[i].$1, steps[i].$2);
-        }
-      });
-    }
-
-    Future.delayed(const Duration(seconds: 16), () {
-      if (mounted) showPaperDialog();
-    });
-  }
+  void _simulateSteps() {}
 
   void reset() {
     _logTimer?.cancel();
-    _stepTimer?.cancel();
-    _initTimer?.cancel();
     state = const HomeState();
   }
 
   @override
   void dispose() {
     _logTimer?.cancel();
-    _stepTimer?.cancel();
-    _initTimer?.cancel();
     super.dispose();
   }
 }
