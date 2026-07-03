@@ -73,27 +73,6 @@ class HomeNotifier extends StateNotifier<HomeState> {
   int _totalPages = 0;
   int _currentPage = 0;
 
-  // ── 连续进度动画 ──────────────────────────────────
-  DateTime? _workStartTime;
-  int _estimatedWorkMs = 0;
-
-  void _startContinuousProgress() {
-    _workStartTime = DateTime.now();
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(milliseconds: 80), (t) {
-      if (!mounted) { t.cancel(); return; }
-      if (_workStartTime == null) { t.cancel(); return; }
-      final elapsed = DateTime.now().difference(_workStartTime!).inMilliseconds;
-      final p = (elapsed / _estimatedWorkMs).clamp(0.0, 1.0);
-      state = state.copyWith(progress: p);
-    });
-  }
-
-  void _stopProgress() {
-    _workStartTime = null;
-    _timer?.cancel();
-  }
-
   // ── 日志辅助 ──────────────────────────────────────
   void _log(String msg) {
     state = state.copyWith(logs: [...state.logs, msg]);
@@ -116,7 +95,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
       Future.delayed(Duration(milliseconds: delay), () {
         if (!mounted) return;
         if (entry.message.isNotEmpty) {
-          final text = entry.autoTimestamp ? '[$_ts]${entry.message}' : entry.message;
+          final text = entry.autoTimestamp ? '[${_ts()}]${entry.message}' : entry.message;
           _log(text);
         }
       });
@@ -322,8 +301,8 @@ class HomeNotifier extends StateNotifier<HomeState> {
   void startWorking() {
     _totalPages = 2 + _rnd.nextInt(3);
     _currentPage = 0;
-    _stopProgress();
-    state = state.copyWith(isInitializing: true, showReadyDialog: false, logs: [], progress: 0.0);
+    _timer?.cancel();
+    state = state.copyWith(isInitializing: true, showReadyDialog: false, logs: []);
 
     final initEntries = _buildInitLogs();
     final initTotalMs = initEntries.fold<int>(0, (sum, e) => sum + e.delayMs);
@@ -337,15 +316,11 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void confirmReady() {
-    final pageTimeMs = 3500 + 7900 + 16500 + 10500 + 14400 + 4500;
-    _estimatedWorkMs = _totalPages * pageTimeMs - 4500 + 3000;
     state = state.copyWith(
       showReadyDialog: false,
       isWorking: true,
       currentStep: PrintStep.turningPage,
-      progress: 0.0,
     );
-    _startContinuousProgress();
     _startPageCycle();
   }
 
@@ -354,7 +329,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void showPaperDialog() {
-    _stopProgress();
+    _timer?.cancel();
     state = state.copyWith(showPaperDialog: true, currentStep: PrintStep.completed, progress: 1.0);
   }
 
@@ -378,7 +353,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
       pageCount: _totalPages,
     );
     _db.addRecord(record);
-    _stopProgress();
+    _timer?.cancel();
     state = state.copyWith(
       showPaperDialog: false,
       isWorking: false,
@@ -388,13 +363,13 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void reset() {
-    _stopProgress();
+    _timer?.cancel();
     state = const HomeState();
   }
 
   @override
   void dispose() {
-    _stopProgress();
+    _timer?.cancel();
     super.dispose();
   }
 }

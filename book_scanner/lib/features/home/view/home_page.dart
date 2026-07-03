@@ -5,7 +5,6 @@ import '../../../../core/constants/app_enums.dart';
 import '../../../../core/providers/device_provider.dart';
 import '../../../../shared/widgets/device_status_bar.dart';
 import '../providers/home_provider.dart';
-import '../widgets/print_progress.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -15,6 +14,13 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  final ScrollController _logScrollCtrl = ScrollController();
+
+  @override
+  void dispose() {
+    _logScrollCtrl.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -22,6 +28,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     final deviceState = ref.watch(deviceProvider);
     final isInitializing = homeState.isInitializing;
     final isWorking = homeState.isWorking;
+
+    ref.listen(homeProvider.select((s) => s.logs.length), (_, __) {
+      _scrollToBottom();
+    });
 
     ref.listen(homeProvider.select((s) => s.showReadyDialog), (_, show) {
       if (show) _showReadyDialog();
@@ -55,8 +65,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 const SizedBox(height: 24),
                 if (isInitializing) _initLoadingCard(theme),
                 if (isWorking || homeState.currentStep != PrintStep.idle) ...[
-                  _workingArea(theme, homeState),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
                 ],
                 if (!isInitializing) _actionArea(theme, homeState),
                 const SizedBox(height: 32),
@@ -137,14 +146,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _workingArea(ThemeData theme, HomeState state) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('打印进度', style: theme.textTheme.titleMedium),
-      const SizedBox(height: 12),
-      PrintProgressWidget(step: state.currentStep, progress: state.progress),
-    ]);
-  }
-
   Widget _actionArea(ThemeData theme, HomeState homeState) {
     return Column(children: [
       SizedBox(
@@ -160,6 +161,18 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ),
     ]);
+  }
+
+  void _scrollToBottom() {
+    if (_logScrollCtrl.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _logScrollCtrl.animateTo(
+          _logScrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      });
+    }
   }
 
   Widget _logPanel(ThemeData theme, HomeState state) {
@@ -191,6 +204,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
         Expanded(
           child: ListView.builder(
+            controller: _logScrollCtrl,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             itemCount: logs.length,
             itemBuilder: (_, i) {
