@@ -44,24 +44,24 @@ class BrailleRecord {
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,
-        'sourceType': sourceType,
-        'dotMatrixWidth': dotMatrixWidth,
-        'dotMatrixHeight': dotMatrixHeight,
-        'dotMatrixData': dotMatrixData,
-        'createdAt': createdAt.toIso8601String(),
-        'pageCount': pageCount,
+        'source_type': sourceType,
+        'dot_matrix_width': dotMatrixWidth,
+        'dot_matrix_height': dotMatrixHeight,
+        'dot_matrix_data': dotMatrixData,
+        'created_at': createdAt.toIso8601String(),
+        'page_count': pageCount,
       };
 
   factory BrailleRecord.fromJson(Map<String, dynamic> json) {
     return BrailleRecord(
       id: json['id'] ?? '',
       title: json['title'] ?? '',
-      sourceType: json['sourceType'] ?? '',
-      dotMatrixWidth: json['dotMatrixWidth'] ?? 0,
-      dotMatrixHeight: json['dotMatrixHeight'] ?? 0,
-      dotMatrixData: (json['dotMatrixData'] as List?)?.map((r) => List<int>.from(r)).toList() ?? [],
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
-      pageCount: json['pageCount'] ?? 1,
+      sourceType: json['source_type'] ?? '',
+      dotMatrixWidth: json['dot_matrix_width'] ?? 0,
+      dotMatrixHeight: json['dot_matrix_height'] ?? 0,
+      dotMatrixData: (json['dot_matrix_data'] as List?)?.map((r) => List<int>.from(r)).toList() ?? [],
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      pageCount: json['page_count'] ?? 1,
     );
   }
 }
