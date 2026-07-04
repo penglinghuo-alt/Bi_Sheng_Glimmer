@@ -4,6 +4,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_enums.dart';
 import '../../../../core/providers/device_provider.dart';
 import '../../../../shared/widgets/device_status_bar.dart';
+import '../../../../data/local_db/database_helper.dart';
+import '../../../../data/models/braille_record.dart';
 import '../providers/home_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -62,6 +64,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                 _greeting(theme),
                 const SizedBox(height: 24),
                 _modeSelector(theme, homeState, isWorking || isInitializing),
+                if (homeState.selectedMode == PrintMode.localFile && !isWorking && !isInitializing) ...[
+                  const SizedBox(height: 16),
+                  _filePicker(theme, homeState),
+                ],
                 const SizedBox(height: 24),
                 if (isInitializing) _initLoadingCard(theme),
                 if (isWorking || homeState.currentStep != PrintStep.idle) ...[
@@ -124,6 +130,101 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  Widget _filePicker(ThemeData theme, HomeState homeState) {
+    final selected = homeState.selectedRecord;
+    if (selected != null) {
+      return _selectedFileCard(theme, selected);
+    }
+    final records = DatabaseHelper().getRecords(orderByDate: true);
+    if (records.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(children: [
+          Icon(Icons.inbox_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+          const SizedBox(width: 12),
+          Text('存储库中暂无文件', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+        ]),
+      );
+    }
+    final now = DateTime.now();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text('选择存储库文件', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+        ),
+        ...records.map((r) {
+          final diff = now.difference(r.createdAt);
+          final timeStr = diff.inDays > 0 ? '${diff.inDays}天前' : (diff.inHours > 0 ? '${diff.inHours}小时前' : '${diff.inMinutes}分钟前');
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => ref.read(homeProvider.notifier).selectRecord(r),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(children: [
+                    Icon(r.sourceType == '现场扫描' ? Icons.document_scanner_rounded : Icons.description_rounded, size: 20, color: theme.colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(r.title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text('$timeStr · ${r.pageCount}面 · ${r.sourceType}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                      ]),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          );
+        }),
+      ]),
+    );
+  }
+
+  Widget _selectedFileCard(ThemeData theme, BrailleRecord record) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(children: [
+        Container(
+          width: 40, height: 40,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.description_rounded, color: theme.colorScheme.primary, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(record.title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text('${record.pageCount}面 · ${record.sourceType}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+          ]),
+        ),
+        IconButton(
+          icon: const Icon(Icons.close_rounded, size: 18),
+          onPressed: () => ref.read(homeProvider.notifier).selectRecord(null),
+        ),
+      ]),
+    );
+  }
+
   Widget _initLoadingCard(ThemeData theme) {
     return Container(
       width: double.infinity,
@@ -147,11 +248,12 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _actionArea(ThemeData theme, HomeState homeState) {
+    final canStart = homeState.selectedMode == PrintMode.scanAndPrint || homeState.selectedRecord != null;
     return Column(children: [
       SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
-          onPressed: () => ref.read(homeProvider.notifier).startWorking(),
+          onPressed: canStart ? () => ref.read(homeProvider.notifier).startWorking() : null,
           icon: const Icon(Icons.play_arrow_rounded, size: 20),
           label: const Text('开始工作', style: TextStyle(fontWeight: FontWeight.w600)),
           style: FilledButton.styleFrom(
@@ -246,7 +348,11 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: const Icon(Icons.check_circle_outline_rounded, color: AppColors.primary, size: 36),
           ),
           title: const Text('机器已准备完毕', style: TextStyle(fontWeight: FontWeight.w800), textAlign: TextAlign.center),
-          content: const Text('设备初始化完成\n请放入纸张后点击确定开始打印', textAlign: TextAlign.center, style: TextStyle(fontSize: 15)),
+          content: Text(
+            homeState.selectedMode == PrintMode.localFile
+                ? '设备初始化完成\n请放入纸张后点击确定开始打印'
+                : '设备初始化完成\n请放入纸张后点击确定开始打印',
+            textAlign: TextAlign.center, style: const TextStyle(fontSize: 15)),
           actions: [
             SizedBox(
               width: double.infinity,

@@ -17,6 +17,7 @@ class HomeState {
   final bool isWorking;
   final List<String> logs;
   final bool showReadyDialog;
+  final BrailleRecord? selectedRecord;
 
   const HomeState({
     this.selectedMode = PrintMode.scanAndPrint,
@@ -27,6 +28,7 @@ class HomeState {
     this.isWorking = false,
     this.logs = const [],
     this.showReadyDialog = false,
+    this.selectedRecord,
   });
 
   HomeState copyWith({
@@ -38,6 +40,7 @@ class HomeState {
     bool? isWorking,
     List<String>? logs,
     bool? showReadyDialog,
+    BrailleRecord? selectedRecord,
   }) {
     return HomeState(
       selectedMode: selectedMode ?? this.selectedMode,
@@ -48,6 +51,7 @@ class HomeState {
       isWorking: isWorking ?? this.isWorking,
       logs: logs ?? this.logs,
       showReadyDialog: showReadyDialog ?? this.showReadyDialog,
+      selectedRecord: selectedRecord ?? this.selectedRecord,
     );
   }
 }
@@ -140,10 +144,18 @@ class HomeNotifier extends StateNotifier<HomeState> {
   // ════════════════════════════════════════════════════
   void _startPageCycle() {
     _currentPage++;
-    if (_currentPage == 1) {
-      _phasePaperDetect();
+    if (state.selectedMode == PrintMode.localFile) {
+      final title = state.selectedRecord?.title ?? '未知文件';
+      _log('[${_ts()}][INFO][main] 打开文件: $title');
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) _phaseConvert();
+      });
     } else {
-      _phaseTurnPage();
+      if (_currentPage == 1) {
+        _phasePaperDetect();
+      } else {
+        _phaseTurnPage();
+      }
     }
   }
 
@@ -290,11 +302,20 @@ class HomeNotifier extends StateNotifier<HomeState> {
   HomeNotifier() : super(const HomeState());
 
   void setMode(PrintMode mode) {
-    state = state.copyWith(selectedMode: mode);
+    state = state.copyWith(selectedMode: mode, selectedRecord: null);
+  }
+
+  void selectRecord(BrailleRecord? record) {
+    state = state.copyWith(selectedRecord: record);
   }
 
   void startWorking() {
-    _totalPages = 3 + _rnd.nextInt(2);
+    if (state.selectedMode == PrintMode.localFile) {
+      final rec = state.selectedRecord;
+      _totalPages = rec != null ? rec.pageCount : (3 + _rnd.nextInt(2));
+    } else {
+      _totalPages = 3 + _rnd.nextInt(2);
+    }
     _currentPage = 0;
     _timer?.cancel();
     state = state.copyWith(isInitializing: true, showReadyDialog: false, logs: []);
