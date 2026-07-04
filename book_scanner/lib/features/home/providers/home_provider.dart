@@ -235,7 +235,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
     final totalRows = 25 + _rnd.nextInt(15);
 
     // 每批打印约 38s，5 批 + 首尾 ≈ 200s
-    final batchMs = 36000 + _rnd.nextInt(8000);
+    final batchMs = 63000 + _rnd.nextInt(10000);
 
     final entries = [
       _LogEntry('[INFO][printer] 打印头就绪，开始打印第 $_currentPage 页，总行数: $totalRows', 3000, autoTimestamp: true),
