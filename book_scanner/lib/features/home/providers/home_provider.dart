@@ -163,8 +163,8 @@ class HomeNotifier extends StateNotifier<HomeState> {
     state = state.copyWith(currentStep: PrintStep.turningPage);
     final turnTime = _rndDec(1.8, 0.4);
     final entries = [
-      _LogEntry('[INFO][scanner] 开始翻页 (第 $_currentPage/$_totalPages 页)...', 2000, autoTimestamp: true),
-      _LogEntry('[INFO][scanner] 翻页完成，步进电机到位，耗时 ${turnTime}s', 8000, autoTimestamp: true),
+      _LogEntry('[INFO][scanner] 翻面 (第 $_currentPage 面)...', 2000, autoTimestamp: true),
+      _LogEntry('[INFO][scanner] 翻面完成，步进电机到位，耗时 ${turnTime}s', 8000, autoTimestamp: true),
     ];
     _playEntries(entries, onDone: () => _phaseCapture());
   }
@@ -175,7 +175,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
     final res = '${2000 + _rnd.nextInt(200)}x${1400 + _rnd.nextInt(200)}';
     final entries = [
       _LogEntry('[INFO][camera] 摄像头初始化...', 2000, autoTimestamp: true),
-      _LogEntry('[INFO][camera] 正在拍摄第 $_currentPage 页图像...', 8000, autoTimestamp: true),
+      _LogEntry('[INFO][camera] 正在拍摄第 $_currentPage 面...', 8000, autoTimestamp: true),
       _LogEntry('[INFO][camera] 图像采集完成，分辨率 $res, 300DPI', 3000, autoTimestamp: true),
       _LogEntry('[INFO][camera] 图像预处理：去噪、二值化、倾斜校正', 8000, autoTimestamp: true),
       _LogEntry('[INFO][camera] 预处理完成', 2000, autoTimestamp: true),
@@ -190,7 +190,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
     final charCount = 200 + _rnd.nextInt(300);
     final regions = 10 + _rnd.nextInt(12);
     final entries = [
-      _LogEntry('[INFO][ocr] 开始第 $_currentPage 页 OCR 文字识别...', 2000, autoTimestamp: true),
+      _LogEntry('[INFO][ocr] 第 $_currentPage 面 OCR 识别开始...', 2000, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 加载检测模型: PP-OCRv5_mobile_det.rknn', 3000, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 加载识别模型: PP-OCRv5_mobile_rec.rknn', 3000, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 模型加载完成，推理引擎: RKNN (RK3588 NPU)', 2000, autoTimestamp: true),
@@ -200,7 +200,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
       _LogEntry('[INFO][ocr] 区域 1-${regions ~/ 3} 识别完成', 5000, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 区域 ${regions ~/ 3 + 1}-${regions * 2 ~/ 3} 识别完成', 5000, autoTimestamp: true),
       _LogEntry('[INFO][ocr] 区域 ${regions * 2 ~/ 3 + 1}-$regions 识别完成', 4000, autoTimestamp: true),
-      _LogEntry('[INFO][ocr] 第 $_currentPage 页 OCR 识别完成，共检测 $charCount 个字符', 3000, autoTimestamp: true),
+      _LogEntry('[INFO][ocr] 第 $_currentPage 面 OCR 识别完成，共 $charCount 个字符', 3000, autoTimestamp: true),
       _LogEntry('', 8000),
     ];
     _playEntries(entries, onDone: () => _phaseConvert());
@@ -215,7 +215,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
     final c2 = 80 + _rnd.nextInt(60);
     final c3 = 100 + _rnd.nextInt(80);
     final entries = [
-      _LogEntry('[INFO][converter] 开始盲文点阵转换 (第 $_currentPage 页)...', 2000, autoTimestamp: true),
+      _LogEntry('[INFO][converter] 开始盲文点阵转换 (第 $_currentPage 面)...', 2000, autoTimestamp: true),
       _LogEntry('[INFO][converter] 加载盲文对照表: braille_table_v2.json', 5000, autoTimestamp: true),
       _LogEntry('[INFO][converter] 文本分段处理中...', 3000, autoTimestamp: true),
       _LogEntry('[INFO][converter] 共 3 个段落，逐段转换', 2000, autoTimestamp: true),
@@ -238,13 +238,13 @@ class HomeNotifier extends StateNotifier<HomeState> {
     final batchMs = 63000 + _rnd.nextInt(10000);
 
     final entries = [
-      _LogEntry('[INFO][printer] 打印头就绪，开始打印第 $_currentPage 页，总行数: $totalRows', 3000, autoTimestamp: true),
+      _LogEntry('[INFO][printer] 打印头就绪，第 $_currentPage 面开始打印，总行数: $totalRows', 3000, autoTimestamp: true),
       _LogEntry('[INFO][printer] 打印行 1-${totalRows ~/ 5}', batchMs, autoTimestamp: true),
       _LogEntry('[INFO][printer] 打印行 ${totalRows ~/ 5 + 1}-${totalRows * 2 ~/ 5}', batchMs, autoTimestamp: true),
       _LogEntry('[INFO][printer] 打印行 ${totalRows * 2 ~/ 5 + 1}-${totalRows * 3 ~/ 5}', batchMs, autoTimestamp: true),
       _LogEntry('[INFO][printer] 打印行 ${totalRows * 3 ~/ 5 + 1}-${totalRows * 4 ~/ 5}', batchMs, autoTimestamp: true),
       _LogEntry('[INFO][printer] 打印行 ${totalRows * 4 ~/ 5 + 1}-$totalRows', batchMs, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 第 $_currentPage 页打印完成', 3000, autoTimestamp: true),
+      _LogEntry('[INFO][printer] 第 $_currentPage 面打印完成', 3000, autoTimestamp: true),
     ];
     _playEntries(entries, onDone: () {
       if (_currentPage >= _totalPages) {
@@ -275,7 +275,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
   void _phaseFinished() {
     final entries = [
       _LogEntry('[INFO][scanner] 机械臂归位', 3000, autoTimestamp: true),
-      _LogEntry('[INFO][main] --- 本次打印任务全部完成，共 $_totalPages 页 ---', 3000, autoTimestamp: true),
+      _LogEntry('[INFO][main] --- 打印任务全部完成，共 $_currentPage 面 ---', 3000, autoTimestamp: true),
     ];
     _playEntries(entries, onDone: () {
       Future.delayed(const Duration(seconds: 3), () {
