@@ -348,11 +348,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: const Icon(Icons.check_circle_outline_rounded, color: AppColors.primary, size: 36),
           ),
           title: const Text('机器已准备完毕', style: TextStyle(fontWeight: FontWeight.w800), textAlign: TextAlign.center),
-          content: Text(
-            homeState.selectedMode == PrintMode.localFile
-                ? '设备初始化完成\n请放入纸张后点击确定开始打印'
-                : '设备初始化完成\n请放入纸张后点击确定开始打印',
-            textAlign: TextAlign.center, style: const TextStyle(fontSize: 15)),
+          content: const Text('请放入纸张后点击确定开始打印', textAlign: TextAlign.center, style: TextStyle(fontSize: 15)),
           actions: [
             SizedBox(
               width: double.infinity,
