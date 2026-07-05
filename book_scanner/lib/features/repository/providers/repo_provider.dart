@@ -31,43 +31,13 @@ class RepoNotifier extends StateNotifier<RepoState> {
     final now = DateTime.now();
     _db.addRecord(BrailleRecord(
       id: 'seed_001',
-      title: '三年级语文课文《春》',
+      title: '第四章 黎族船形屋文化源流与建筑特色',
       sourceType: '现场扫描',
       dotMatrixWidth: 40,
       dotMatrixHeight: 30,
       dotMatrixData: List.generate(30, (_) => List.filled(40, 0)),
       createdAt: now.subtract(const Duration(hours: 3)),
-      pageCount: 3,
-    ));
-    _db.addRecord(BrailleRecord(
-      id: 'seed_002',
-      title: '数学练习册 第五单元',
-      sourceType: '本地文件',
-      dotMatrixWidth: 0,
-      dotMatrixHeight: 0,
-      dotMatrixData: [],
-      createdAt: now.subtract(const Duration(days: 1)),
-      pageCount: 8,
-    ));
-    _db.addRecord(BrailleRecord(
-      id: 'seed_003',
-      title: '英语单词表 Unit 3',
-      sourceType: '现场扫描',
-      dotMatrixWidth: 32,
-      dotMatrixHeight: 24,
-      dotMatrixData: List.generate(24, (_) => List.filled(32, 0)),
-      createdAt: now.subtract(const Duration(days: 2)),
-      pageCount: 2,
-    ));
-    _db.addRecord(BrailleRecord(
-      id: 'seed_004',
-      title: '通知：期末考试安排',
-      sourceType: '本地文件',
-      dotMatrixWidth: 0,
-      dotMatrixHeight: 0,
-      dotMatrixData: [],
-      createdAt: now.subtract(const Duration(days: 3)),
-      pageCount: 1,
+      pageCount: 4,
     ));
   }
 

@@ -238,9 +238,12 @@ class HomeNotifier extends StateNotifier<HomeState> {
     state = state.copyWith(currentStep: PrintStep.printing);
 
     const texts = [
-      '海南岛的地形特点是中高四周低形成了山地丘陵台地和沿海平原等梯级',
-      '盲文点阵打印中逐点扫描输出确保触觉可识别',
-      '北京市海淀区中关村南大街五号国家图书馆古籍阅览室',
+      '第四章 黎族船形屋文化源流与建筑特色海南岛的地形特点是中高四周低，'
+      '形成了山地丘陵、台地和沿海平原等梯级。黎族主要聚居在海南岛的中南部，'
+      '这里纬度低，雨量丰，阳光足，长夏而无冬，秋春相连，四季不分明。'
+      '黎族村落就散落在海南岛中南部的丘陵、盆地、峡谷和一些滨海平原上。'
+      '几千年的历史发展，孕育出了黎族丰富多彩的民族文化。'
+      '黎族传统建筑的船形屋则是极具特色之一。',
     ];
     final text = texts[_rnd.nextInt(texts.length)];
     final charCount = text.length;
