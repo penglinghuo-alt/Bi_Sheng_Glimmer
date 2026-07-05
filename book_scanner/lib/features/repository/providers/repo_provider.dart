@@ -36,7 +36,7 @@ class RepoNotifier extends StateNotifier<RepoState> {
       dotMatrixWidth: 40,
       dotMatrixHeight: 30,
       dotMatrixData: List.generate(30, (_) => List.filled(40, 0)),
-      createdAt: now.subtract(const Duration(hours: 3)),
+      createdAt: now,
       pageCount: 4,
     ));
   }
