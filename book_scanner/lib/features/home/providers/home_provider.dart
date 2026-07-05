@@ -218,46 +218,91 @@ class HomeNotifier extends StateNotifier<HomeState> {
     _playEntries(entries, onDone: () => _phaseConvert());
   }
 
-  // ── 盲文转换 (~35s) ─────────────────────────────
+  // ── 盲文转换 (~20s) ─────────────────────────────
   void _phaseConvert() {
     state = state.copyWith(currentStep: PrintStep.converting);
     final w = 40 + _rnd.nextInt(10);
     final h = 30 + _rnd.nextInt(5);
-    final c1 = 40 + _rnd.nextInt(60);
-    final c2 = 80 + _rnd.nextInt(60);
-    final c3 = 100 + _rnd.nextInt(80);
     final entries = [
-      _LogEntry('[INFO][converter] 开始盲文点阵转换 (第 $_currentPage 面)...', 2000, autoTimestamp: true),
-      _LogEntry('[INFO][converter] 加载盲文对照表: braille_table_v2.json', 5000, autoTimestamp: true),
-      _LogEntry('[INFO][converter] 文本分段处理中...', 3000, autoTimestamp: true),
-      _LogEntry('[INFO][converter] 共 3 个段落，逐段转换', 2000, autoTimestamp: true),
-      _LogEntry('[INFO][converter] 第 1 段落转换完成 ($c1 字符)', 5000, autoTimestamp: true),
-      _LogEntry('[INFO][converter] 第 2 段落转换完成 ($c2 字符)', 5000, autoTimestamp: true),
-      _LogEntry('[INFO][converter] 第 3 段落转换完成 ($c3 字符)', 5000, autoTimestamp: true),
+      _LogEntry('[INFO][converter] 加载盲文对照表: braille_table_v2.json', 4000, autoTimestamp: true),
+      _LogEntry('[INFO][converter] 文本分段中...', 3000, autoTimestamp: true),
       _LogEntry('[INFO][converter] 点阵映射完成: ${w}x$h', 3000, autoTimestamp: true),
-      _LogEntry('[INFO][converter] 盲文转换完成，开始传输数据', 3000, autoTimestamp: true),
-      _LogEntry('', 4000),
+      _LogEntry('[INFO][converter] 盲文转换完成，数据传输至打印队列', 2000, autoTimestamp: true),
+      _LogEntry('', 8000),
     ];
     _playEntries(entries, onDone: () => _phasePrint());
   }
 
-  // ── 打印 (~200s = 3分20秒) ─────────────────────
+  // ── 打印 (~330s = ~5.5分钟) ────────────────────
   void _phasePrint() {
     state = state.copyWith(currentStep: PrintStep.printing);
-    final totalRows = 25 + _rnd.nextInt(15);
 
-    // 每批打印约 38s，5 批 + 首尾 ≈ 200s
-    final batchMs = 63000 + _rnd.nextInt(10000);
-
-    final entries = [
-      _LogEntry('[INFO][printer] 打印头就绪，第 $_currentPage 面开始打印，总行数: $totalRows', 3000, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 1-${totalRows ~/ 5}', batchMs, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 ${totalRows ~/ 5 + 1}-${totalRows * 2 ~/ 5}', batchMs, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 ${totalRows * 2 ~/ 5 + 1}-${totalRows * 3 ~/ 5}', batchMs, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 ${totalRows * 3 ~/ 5 + 1}-${totalRows * 4 ~/ 5}', batchMs, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 打印行 ${totalRows * 4 ~/ 5 + 1}-$totalRows', batchMs, autoTimestamp: true),
-      _LogEntry('[INFO][printer] 第 $_currentPage 面打印完成', 3000, autoTimestamp: true),
+    const texts = [
+      '海南岛的地形特点是中高四周低形成了山地丘陵台地和沿海平原等梯级',
+      '盲文点阵打印中逐点扫描输出确保触觉可识别',
+      '北京市海淀区中关村南大街五号国家图书馆古籍阅览室',
     ];
+    final text = texts[_rnd.nextInt(texts.length)];
+    final charCount = text.length;
+    final overflowAt = charCount - 3 - _rnd.nextInt(4);
+
+    final entries = <_LogEntry>[];
+
+    // OCR init (~15s)
+    entries.addAll([
+      _LogEntry('[OCRThread][INFO][ocr.adapter] OCR 模型就绪，等待打印指令', 4000, autoTimestamp: true),
+      _LogEntry('[OCRThread][INFO][threads.ocr_thread] 收到 CMD_START_OCR，字符总数: $charCount', 3000, autoTimestamp: true),
+      _LogEntry('[OCRThread][INFO][ocr.adapter] 点阵数据已加载，开始逐点打印', 5000, autoTimestamp: true),
+      _LogEntry('', 3000),
+    ]);
+
+    // 电机动作序列，模拟真实打印过程
+    // 每面约9-13个电机动作循环，每个循环: Y轴移动→打点→X轴移动
+    final motorCycles = 9 + _rnd.nextInt(5); // 9-13 cycles
+    for (int i = 0; i < motorCycles; i++) {
+      final yd = 60000 + _rnd.nextInt(150000);
+      final yDir = _rnd.nextBool() ? 'forward' : 'reverse';
+      final xd = 50000 + _rnd.nextInt(120000);
+      final pt = 1 + _rnd.nextInt(6);
+
+      final yDelay = 8000 + _rnd.nextInt(4000);
+      final punchDelay = 4000 + _rnd.nextInt(3000);
+      final xDelay = 8000 + _rnd.nextInt(4000);
+
+      entries.add(_LogEntry('[PrintWorkerThread][INFO][threads.print_worker] '
+          '[MOTOR-MOVE] Y1/Y2同步移动 direction=$yDir pulses=$yd delta=${yDir == "forward" ? yd : -yd}',
+          yDelay, autoTimestamp: true));
+
+      entries.add(_LogEntry('[PrintWorkerThread][INFO][solenoid] '
+          '电磁铁打点 point=$pt duration=50ms',
+          punchDelay, autoTimestamp: true));
+
+      entries.add(_LogEntry('[PrintWorkerThread][INFO][threads.print_worker] '
+          '[MOTOR-MOVE] X轴移动 direction=forward pulses=$xd delta=$xd',
+          xDelay, autoTimestamp: true));
+
+      // 在 ~70% 进度时触发换页信号
+      if (i == (motorCycles * 0.7).round()) {
+        entries.add(_LogEntry('[MotionPlannerThread][INFO][core.motion_planner_thread] '
+            '文字超页(消费$overflowAt/$charCount字)，已触发回零+换页信号，剩余${charCount - overflowAt}字',
+            4000, autoTimestamp: true));
+      }
+    }
+
+    // 电机回零
+    entries.add(_LogEntry('[PrintWorkerThread][INFO][threads.print_worker] '
+        '[MOTOR-MOVE] X轴回零 direction=reverse pulses=300000 delta=-300000', 6000, autoTimestamp: true));
+    entries.add(_LogEntry('[PrintWorkerThread][INFO][threads.print_worker] '
+        '[MOTOR-MOVE] Y1/Y2同步回零 direction=reverse pulses=255000 delta=-255000', 6000, autoTimestamp: true));
+
+    // 完成
+    entries.add(_LogEntry('[MainThread][INFO][main] '
+        '页面打印完成(已打$overflowAt字)，剩余${charCount - overflowAt}字，等待换页确认...',
+        4000, autoTimestamp: true));
+    entries.add(_LogEntry('[PrintWorkerThread][INFO][printer] '
+        '第 $_currentPage 面打印完成，电机归位', 3000, autoTimestamp: true));
+    entries.add(_LogEntry('', 4000));
+
     _playEntries(entries, onDone: () {
       if (_currentPage >= _totalPages) {
         _phaseFinished();
