@@ -5,6 +5,7 @@ class BrailleRecord {
   final int dotMatrixWidth;
   final int dotMatrixHeight;
   final List<List<int>> dotMatrixData;
+  final String? textContent;
   final DateTime createdAt;
   final int pageCount;
 
@@ -16,6 +17,7 @@ class BrailleRecord {
     required this.dotMatrixHeight,
     required this.dotMatrixData,
     required this.createdAt,
+    this.textContent,
     this.pageCount = 1,
   });
 
@@ -26,6 +28,7 @@ class BrailleRecord {
     int? dotMatrixWidth,
     int? dotMatrixHeight,
     List<List<int>>? dotMatrixData,
+    String? textContent,
     DateTime? createdAt,
     int? pageCount,
   }) {
@@ -36,6 +39,7 @@ class BrailleRecord {
       dotMatrixWidth: dotMatrixWidth ?? this.dotMatrixWidth,
       dotMatrixHeight: dotMatrixHeight ?? this.dotMatrixHeight,
       dotMatrixData: dotMatrixData ?? this.dotMatrixData,
+      textContent: textContent ?? this.textContent,
       createdAt: createdAt ?? this.createdAt,
       pageCount: pageCount ?? this.pageCount,
     );
@@ -48,6 +52,7 @@ class BrailleRecord {
         'dot_matrix_width': dotMatrixWidth,
         'dot_matrix_height': dotMatrixHeight,
         'dot_matrix_data': dotMatrixData,
+        'text_content': textContent,
         'created_at': createdAt.toIso8601String(),
         'page_count': pageCount,
       };
@@ -60,6 +65,7 @@ class BrailleRecord {
       dotMatrixWidth: json['dot_matrix_width'] ?? 0,
       dotMatrixHeight: json['dot_matrix_height'] ?? 0,
       dotMatrixData: (json['dot_matrix_data'] as List?)?.map((r) => List<int>.from(r)).toList() ?? [],
+      textContent: json['text_content'],
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       pageCount: json['page_count'] ?? 1,
     );

@@ -30,7 +30,8 @@ def list_records(
             BrailleRecordResponse(
                 id=r.id, title=r.title, source_type=r.source_type,
                 dot_matrix_width=r.dot_matrix_width, dot_matrix_height=r.dot_matrix_height,
-                dot_matrix_data=r.dot_matrix_data or [], page_count=r.page_count, created_at=r.created_at,
+                dot_matrix_data=r.dot_matrix_data or [], text_content=r.text_content,
+                page_count=r.page_count, created_at=r.created_at,
             ) for r in records
         ],
     )
@@ -44,7 +45,8 @@ def get_record(record_id: str, current_user: User = Depends(get_current_user), d
     return BrailleRecordResponse(
         id=record.id, title=record.title, source_type=record.source_type,
         dot_matrix_width=record.dot_matrix_width, dot_matrix_height=record.dot_matrix_height,
-        dot_matrix_data=record.dot_matrix_data or [], page_count=record.page_count, created_at=record.created_at,
+        dot_matrix_data=record.dot_matrix_data or [], text_content=record.text_content,
+        page_count=record.page_count, created_at=record.created_at,
     )
 
 
@@ -58,6 +60,7 @@ def create_record(req: BrailleRecordCreate, current_user: User = Depends(get_cur
         dot_matrix_width=req.dot_matrix_width,
         dot_matrix_height=req.dot_matrix_height,
         dot_matrix_data=req.dot_matrix_data,
+        text_content=req.text_content,
         page_count=req.page_count,
     )
     db.add(record)
@@ -66,7 +69,8 @@ def create_record(req: BrailleRecordCreate, current_user: User = Depends(get_cur
     return BrailleRecordResponse(
         id=record.id, title=record.title, source_type=record.source_type,
         dot_matrix_width=record.dot_matrix_width, dot_matrix_height=record.dot_matrix_height,
-        dot_matrix_data=record.dot_matrix_data or [], page_count=record.page_count, created_at=record.created_at,
+        dot_matrix_data=record.dot_matrix_data or [], text_content=record.text_content,
+        page_count=record.page_count, created_at=record.created_at,
     )
 
 
@@ -81,7 +85,8 @@ def rename_record(record_id: str, req: BrailleRecordRename, current_user: User =
     return BrailleRecordResponse(
         id=record.id, title=record.title, source_type=record.source_type,
         dot_matrix_width=record.dot_matrix_width, dot_matrix_height=record.dot_matrix_height,
-        dot_matrix_data=record.dot_matrix_data or [], page_count=record.page_count, created_at=record.created_at,
+        dot_matrix_data=record.dot_matrix_data or [], text_content=record.text_content,
+        page_count=record.page_count, created_at=record.created_at,
     )
 
 

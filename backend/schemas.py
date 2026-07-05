@@ -45,6 +45,7 @@ class BrailleRecordCreate(BaseModel):
     dot_matrix_width: int = 0
     dot_matrix_height: int = 0
     dot_matrix_data: List[List[int]] = []
+    text_content: Optional[str] = None
     page_count: int = 1
 
 
@@ -59,6 +60,7 @@ class BrailleRecordResponse(BaseModel):
     dot_matrix_width: int
     dot_matrix_height: int
     dot_matrix_data: List[List[int]]
+    text_content: Optional[str] = None
     page_count: int
     created_at: datetime
 

@@ -30,6 +30,7 @@ class BrailleRecord(Base):
     dot_matrix_width = Column(Integer, default=0)
     dot_matrix_height = Column(Integer, default=0)
     dot_matrix_data = Column(JSON, default=[])
+    text_content = Column(Text, nullable=True)
     page_count = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

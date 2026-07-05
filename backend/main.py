@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from database import init_db, SessionLocal
-from models import User
+from models import User, BrailleRecord
 from auth_utils import hash_password, generate_id
 from api.routers import auth, records, device, logs
 from api.routers.auth import avatar_router
@@ -34,6 +34,7 @@ from api.routers.auth import avatar_router
 async def lifespan(app: FastAPI):
     init_db()
     _seed_demo_user()
+    _seed_demo_record()
     yield
 
 
@@ -47,6 +48,43 @@ def _seed_demo_user():
                 email="test@bisheng.com",
                 password_hash=hash_password("123456"),
                 bio="毕昇微光管理员",
+            ))
+            db.commit()
+    finally:
+        db.close()
+
+
+_LIZU_TEXT = (
+    "第四章 黎族船形屋文化源流与建筑特色"
+    "海南岛的地形特点是中高四周低，形成了山地丘陵、台地和沿海平原等梯级。"
+    "黎族主要聚居在海南岛的中南部，这里纬度低，雨量丰，阳光足，长夏而无冬，"
+    "秋春相连，四季不分明。黎族村落就散落在海南岛中南部的丘陵、盆地、峡谷和一些滨海平原上。"
+    "几千年的历史发展，孕育出了黎族丰富多彩的民族文化。"
+    "黎族传统建筑的船形屋则是极具特色之一。"
+)
+
+
+def _seed_demo_record():
+    db: Session = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == "test_admin").first()
+        if user is None:
+            return
+        existing = db.query(BrailleRecord).filter(
+            BrailleRecord.user_id == user.id,
+            BrailleRecord.title == "第四章 黎族船形屋文化源流与建筑特色",
+        ).first()
+        if existing is None:
+            db.add(BrailleRecord(
+                id=generate_id(),
+                user_id=user.id,
+                title="第四章 黎族船形屋文化源流与建筑特色",
+                source_type="现场扫描",
+                dot_matrix_width=40,
+                dot_matrix_height=30,
+                dot_matrix_data=[],
+                text_content=_LIZU_TEXT,
+                page_count=4,
             ))
             db.commit()
     finally:
