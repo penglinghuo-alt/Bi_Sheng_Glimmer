@@ -69,7 +69,9 @@ def _seed_demo_record():
     try:
         user = db.query(User).filter(User.username == "test_admin").first()
         if user is None:
+            print("[seed] test_admin not found, skipping record seed")
             return
+        print(f"[seed] found user: {user.username} (id={user.id})")
         existing = db.query(BrailleRecord).filter(
             BrailleRecord.user_id == user.id,
             BrailleRecord.title == "第四章 黎族船形屋文化源流与建筑特色",
@@ -87,6 +89,11 @@ def _seed_demo_record():
                 page_count=4,
             ))
             db.commit()
+            print("[seed] 黎族船形屋 record inserted successfully")
+        else:
+            print("[seed] 黎族船形屋 record already exists, skipped")
+    except Exception as e:
+        print(f"[seed] ERROR: {e}")
     finally:
         db.close()
 
