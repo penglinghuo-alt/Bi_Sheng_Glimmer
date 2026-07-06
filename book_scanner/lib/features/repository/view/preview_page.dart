@@ -61,10 +61,12 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             _infoCard(theme, record),
             const SizedBox(height: 20),
-            Text('盲文点阵预览', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
-            _dotMatrixPreview(theme, record),
-            const SizedBox(height: 24),
+            if (record.textContent != null && record.textContent!.isNotEmpty) ...[
+              Text('文字内容', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 12),
+              _textContentCard(theme, record.textContent!),
+              const SizedBox(height: 24),
+            ],
             AccessibleButton(
               label: '直接打印',
               icon: Icons.print_rounded,
@@ -118,39 +120,17 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     );
   }
 
-  Widget _dotMatrixPreview(ThemeData theme, BrailleRecord record) {
+  Widget _textContentCard(ThemeData theme, String text) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Semantics(
-        label: '盲文点阵图形预览',
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Column(
-            children: List.generate(
-              record.dotMatrixHeight > 20 ? 20 : record.dotMatrixHeight,
-              (y) => Row(
-                children: List.generate(
-                  record.dotMatrixWidth > 30 ? 30 : record.dotMatrixWidth,
-                  (x) {
-                    final isDot = (record.dotMatrixData[y][x]) == 1;
-                    return Container(
-                      width: 8, height: 8,
-                      margin: const EdgeInsets.all(1.5),
-                      decoration: BoxDecoration(
-                        color: isDot ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        ),
+      child: Text(
+        text,
+        style: theme.textTheme.bodyMedium?.copyWith(height: 1.8, letterSpacing: 1),
       ),
     );
   }

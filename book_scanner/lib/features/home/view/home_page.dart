@@ -150,7 +150,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ]),
       );
     }
-    final now = DateTime.now();
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -163,8 +162,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           child: Text('选择存储库文件', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
         ),
         ...records.map((r) {
-          final diff = now.difference(r.createdAt);
-          final timeStr = diff.inDays > 0 ? '${diff.inDays}天前' : (diff.inHours > 0 ? '${diff.inHours}小时前' : '${diff.inMinutes}分钟前');
+          final timeStr = '${r.createdAt.year}-${r.createdAt.month.toString().padLeft(2, '0')}-${r.createdAt.day.toString().padLeft(2, '0')} '
+              '${r.createdAt.hour.toString().padLeft(2, '0')}:${r.createdAt.minute.toString().padLeft(2, '0')}';
           return Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Material(
