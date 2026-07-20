@@ -33,6 +33,7 @@ dependencies:
   # Networking
   dio: ^5.4.1
   web_socket_channel: ^3.0.2
+  mqtt_client: ^10.2.1
 
   # UI Enhancements
   google_fonts: ^6.2.1

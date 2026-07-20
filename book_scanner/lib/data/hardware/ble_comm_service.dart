@@ -52,12 +52,6 @@ class BleCommService implements IHardwareComm {
   }
 
   @override
-  Future<void> pausePrint() async {
-    Logger.info('[BLE] Pause print');
-    _write(CmdPausePrint().toJson());
-  }
-
-  @override
   Future<void> stopPrint() async {
     Logger.info('[BLE] Stop print');
     _write(CmdStopPrint().toJson());

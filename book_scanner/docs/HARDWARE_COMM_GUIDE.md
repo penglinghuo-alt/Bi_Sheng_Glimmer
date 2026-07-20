@@ -51,9 +51,10 @@ static const String topicDeviceToApp = 'bisheng/status';
 | type | payload | 说明 |
 |------|---------|------|
 | `CMD_START_PRINT` | `{}` | 开始打印 |
-| `CMD_PAUSE_PRINT` | `{}` | 暂停打印 |
 | `CMD_STOP_PRINT` | `{}` | 停止打印 |
 | `CMD_EMERGENCY_STOP` | `{}` | 紧急停止 |
+
+> `CMD_PAUSE_PRINT` / `CMD_RESUME_PRINT` 板端有 bug，已从 App 侧移除，不再通过硬件层发送。
 
 ### 上行状态 (硬件 → APP)
 
@@ -74,7 +75,6 @@ abstract class IHardwareComm {
   Future<void> disconnect();
   Future<bool> initialize();
   Future<void> startPrint();
-  Future<void> pausePrint();
   Future<void> stopPrint();
   Future<void> emergencyStop();
   Stream<HardwareMessage> get deviceStatusStream;

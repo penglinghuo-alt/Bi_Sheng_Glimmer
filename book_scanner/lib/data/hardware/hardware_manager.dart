@@ -53,10 +53,6 @@ class HardwareManager {
     await _currentComm?.startPrint();
   }
 
-  Future<void> pausePrint() async {
-    await _currentComm?.pausePrint();
-  }
-
   Future<void> stopPrint() async {
     await _currentComm?.stopPrint();
   }

@@ -8,13 +8,6 @@ class CmdStartPrint {
   Map<String, dynamic> toJson() => {'type': type, 'payload': payload};
 }
 
-class CmdPausePrint {
-  static const String type = 'CMD_PAUSE_PRINT';
-  final Map<String, dynamic> payload;
-  const CmdPausePrint({this.payload = const {}});
-  Map<String, dynamic> toJson() => {'type': type, 'payload': payload};
-}
-
 class CmdStopPrint {
   static const String type = 'CMD_STOP_PRINT';
   final Map<String, dynamic> payload;

@@ -133,10 +133,12 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
     );
   }
 
+  /// 仅更新本地 UI 状态——板端 CMD_PAUSE_PRINT 有 bug，不应通过硬件层发送
   Future<void> pausePrint() async {
     state = state.copyWith(status: DeviceStatus.paused, currentStep: PrintStep.paused, statusMessage: '已暂停');
   }
 
+  /// 仅更新本地 UI 状态——板端 CMD_RESUME_PRINT 有 bug，不应通过硬件层发送
   Future<void> resumePrint() async {
     state = state.copyWith(status: DeviceStatus.printing, currentStep: PrintStep.printing, statusMessage: '打印中...');
   }

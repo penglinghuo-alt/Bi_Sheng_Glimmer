@@ -50,12 +50,6 @@ class WifiCommService implements IHardwareComm {
   }
 
   @override
-  Future<void> pausePrint() async {
-    Logger.info('[WiFi] Pause print');
-    _send(CmdPausePrint().toJson());
-  }
-
-  @override
   Future<void> stopPrint() async {
     Logger.info('[WiFi] Stop print');
     _send(CmdStopPrint().toJson());
