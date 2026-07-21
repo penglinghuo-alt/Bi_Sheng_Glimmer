@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
@@ -24,6 +25,8 @@ class MqttCommService implements IHardwareComm {
   @override
   Stream<HardwareMessage> get deviceStatusStream => _statusController.stream;
 
+  int get _port => kIsWeb ? 8083 : HardwareConfig.mqttPort;
+
   @override
   Future<bool> connect(String brokerAddress) async {
     _disposed = false;
@@ -32,7 +35,13 @@ class MqttCommService implements IHardwareComm {
 
     final host = brokerAddress.isNotEmpty ? brokerAddress : HardwareConfig.mqttBrokerHost;
 
-    _client = MqttServerClient.withPort(host, HardwareConfig.mqttClientId, HardwareConfig.mqttPort);
+    _client = MqttServerClient.withPort(host, HardwareConfig.mqttClientId, _port);
+
+    if (kIsWeb) {
+      _client!.useWebSocket = true;
+      _client!.websocketProtocols = MqttClientConstants.protocolsSingleDefault;
+      _client!.port = _port;
+    }
 
     _client!.logging(on: false);
     _client!.keepAlivePeriod = HardwareConfig.keepAlivePeriod;
@@ -49,7 +58,7 @@ class MqttCommService implements IHardwareComm {
     _client!.connectionMessage = connMsg;
 
     try {
-      Logger.info('[MQTT] 正在连接 $host:${HardwareConfig.mqttPort}');
+      Logger.info('[MQTT] 正在连接 $host:$_port ${kIsWeb ? '(WebSocket)' : '(TCP)'}');
       await _client!.connect();
     } catch (e) {
       Logger.error('[MQTT] 连接失败: $e');
