@@ -87,7 +87,8 @@ class MqttCommService implements IHardwareComm {
   void _onMessage(List<MqttReceivedMessage<MqttMessage>> messages) {
     for (final msg in messages) {
       final topic = msg.topic;
-      final payloadStr = MqttPublishPayload.bytesToStringAsString(msg.payload.message);
+      final publishMsg = msg.payload as MqttPublishMessage;
+      final payloadStr = MqttPublishPayload.bytesToStringAsString(publishMsg.payload.message);
       Logger.debug('[MQTT] 收到 ← [$topic] $payloadStr');
 
       try {

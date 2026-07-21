@@ -55,6 +55,10 @@ class HardwareConfig {
   static const String statusError = 'STATUS_ERROR';
   static const String statusOcrResult = 'STATUS_OCR_RESULT';
 
+  // ─── BLE/WiFi 内部状态 (桩代码使用) ─────────────
+  static const String statusConnected = 'STATUS_CONNECTED';
+  static const String statusIdle = 'STATUS_IDLE';
+
   // ─── BLE (备用) ─────────────────────────────────
   static const String bleServiceUuid = '0000ffe0-0000-1000-8000-00805f9b34fb';
   static const String bleCharacteristicUuid = '0000ffe1-0000-1000-8000-00805f9b34fb';
