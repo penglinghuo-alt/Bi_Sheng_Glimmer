@@ -34,7 +34,17 @@
 </head>
 <body>
   <script>
-    window.flutterWebRenderer = 'html';
+    // Force HTML renderer (does not depend on gstatic.com CDN)
+    window.addEventListener('load', function(ev) {
+      _flutter.loader.loadEntrypoint({
+        onEntrypointLoaded: async function(engineInitializer) {
+          let appRunner = await engineInitializer.initializeEngine({
+            renderer: 'html',
+          });
+          await appRunner.runApp();
+        }
+      });
+    });
   </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
