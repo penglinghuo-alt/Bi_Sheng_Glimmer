@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+import 'package:mqtt_client/mqtt_browser_client.dart';
 
 import 'comm_interface.dart';
 import 'comm_protocol.dart';
@@ -11,7 +12,7 @@ import '../../../core/constants/hardware_config.dart';
 import '../../../core/utils/logger.dart';
 
 class MqttCommService implements IHardwareComm {
-  MqttServerClient? _client;
+  MqttClient? _client;
   bool _connected = false;
   bool _disposed = false;
   int _reconnectAttempts = 0;
@@ -35,12 +36,13 @@ class MqttCommService implements IHardwareComm {
 
     final host = brokerAddress.isNotEmpty ? brokerAddress : HardwareConfig.mqttBrokerHost;
 
-    _client = MqttServerClient.withPort(host, HardwareConfig.mqttClientId, _port);
-
     if (kIsWeb) {
-      _client!.useWebSocket = true;
-      _client!.websocketProtocols = ['mqtt'];
+      _client = MqttBrowserClient(host, HardwareConfig.mqttClientId);
       _client!.port = _port;
+      (_client as MqttBrowserClient).useWebSocket = true;
+      (_client as MqttBrowserClient).websocketProtocols = ['mqtt'];
+    } else {
+      _client = MqttServerClient.withPort(host, HardwareConfig.mqttClientId, _port);
     }
 
     _client!.logging(on: false);
@@ -58,7 +60,7 @@ class MqttCommService implements IHardwareComm {
     _client!.connectionMessage = connMsg;
 
     try {
-      Logger.info('[MQTT] 正在连接 $host:$_port ${kIsWeb ? '(WebSocket)' : '(TCP)'}');
+      Logger.info('[MQTT] 正在连接 $host:$_port ${kIsWeb ? "(WebSocket)" : "(TCP)"}');
       await _client!.connect();
     } catch (e) {
       Logger.error('[MQTT] 连接失败: $e');
