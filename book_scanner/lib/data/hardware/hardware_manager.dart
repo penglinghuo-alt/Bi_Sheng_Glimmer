@@ -24,13 +24,17 @@ class HardwareManager {
     if (_mode == mode && _currentComm != null) return;
     _mode = mode;
     _currentComm?.disconnect();
+    _currentComm = null;
     switch (mode) {
       case CommMode.mqtt:
         _currentComm = MqttCommService();
+        break;
       case CommMode.ble:
         _currentComm = BleCommService();
+        break;
       case CommMode.wifi:
         _currentComm = WifiCommService();
+        break;
     }
     Logger.info('[HardwareManager] Switched to ${mode.name} mode');
   }

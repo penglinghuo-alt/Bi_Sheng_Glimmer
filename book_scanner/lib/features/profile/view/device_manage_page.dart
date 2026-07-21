@@ -213,7 +213,8 @@ class _DeviceManagePageState extends ConsumerState<DeviceManagePage> {
     );
   }
 
-  void _handleConnect() async {
+  void _handleConnect() {
+    debugPrint('[DevicePage] _handleConnect called, mode=$_mode');
     switch (_mode) {
       case _DeviceMode.mqtt:
         if (mounted) {
@@ -222,16 +223,27 @@ class _DeviceManagePageState extends ConsumerState<DeviceManagePage> {
             useMqtt: true,
           );
         }
+        break;
       case _DeviceMode.ble:
-        await PermissionHelper.requestAllForHardware();
-        if (mounted) {
-          ref.read(deviceProvider.notifier).connect('ELF2-BLE-001');
-        }
+        _connectBle();
+        break;
       case _DeviceMode.wifi:
-        await PermissionHelper.requestAllForHardware();
-        if (mounted) {
-          ref.read(deviceProvider.notifier).connect('192.168.1.100', useWifi: true);
-        }
+        _connectWifi();
+        break;
+    }
+  }
+
+  Future<void> _connectBle() async {
+    await PermissionHelper.requestAllForHardware();
+    if (mounted) {
+      ref.read(deviceProvider.notifier).connect('ELF2-BLE-001');
+    }
+  }
+
+  Future<void> _connectWifi() async {
+    await PermissionHelper.requestAllForHardware();
+    if (mounted) {
+      ref.read(deviceProvider.notifier).connect('192.168.1.100', useWifi: true);
     }
   }
 }

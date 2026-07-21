@@ -39,7 +39,7 @@ class MqttCommService implements IHardwareComm {
 
     if (kIsWeb) {
       _client!.useWebSocket = true;
-      _client!.websocketProtocols = MqttClientConstants.protocolsSingleDefault;
+      _client!.websocketProtocols = ['mqtt'];
       _client!.port = _port;
     }
 

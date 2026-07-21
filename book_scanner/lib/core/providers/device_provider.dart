@@ -144,6 +144,7 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
   }
 
   Future<void> connect(String deviceId, {bool useWifi = false, bool useMqtt = false}) async {
+    debugPrint('[DeviceProvider] connect called, useMqtt=$useMqtt, deviceId=$deviceId');
     state = state.copyWith(status: DeviceStatus.connecting, statusMessage: '连接中...');
 
     if (useMqtt) {
