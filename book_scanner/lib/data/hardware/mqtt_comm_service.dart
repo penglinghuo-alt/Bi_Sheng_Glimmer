@@ -19,6 +19,8 @@ class MqttCommService implements IHardwareComm {
   final StreamController<HardwareMessage> _statusController =
       StreamController<HardwareMessage>.broadcast();
 
+  static const _qos = MqttQos.atMostOnce;
+
   @override
   Stream<HardwareMessage> get deviceStatusStream => _statusController.stream;
 
@@ -30,13 +32,7 @@ class MqttCommService implements IHardwareComm {
 
     final host = brokerAddress.isNotEmpty ? brokerAddress : HardwareConfig.mqttBrokerHost;
 
-    if (HardwareConfig.mqttUseWebSocket) {
-      _client = MqttServerClient.withPort(host, HardwareConfig.mqttClientId, HardwareConfig.mqttPort)
-        ..useWebSocket = true
-        ..websocketProtocols = ['mqtt'];
-    } else {
-      _client = MqttServerClient.withPort(host, HardwareConfig.mqttClientId, HardwareConfig.mqttPort);
-    }
+    _client = MqttServerClient.withPort(host, HardwareConfig.mqttClientId, HardwareConfig.mqttPort);
 
     _client!.logging(on: false);
     _client!.keepAlivePeriod = HardwareConfig.keepAlivePeriod;
@@ -49,13 +45,6 @@ class MqttCommService implements IHardwareComm {
         .withClientIdentifier(HardwareConfig.mqttClientId)
         .startClean()
         .keepAliveFor(HardwareConfig.keepAlivePeriod);
-
-    if (HardwareConfig.mqttUsername != null && HardwareConfig.mqttUsername!.isNotEmpty) {
-      connMsg.withUsername(HardwareConfig.mqttUsername!);
-    }
-    if (HardwareConfig.mqttPassword != null && HardwareConfig.mqttPassword!.isNotEmpty) {
-      connMsg.withPassword(HardwareConfig.mqttPassword!);
-    }
 
     _client!.connectionMessage = connMsg;
 
@@ -73,9 +62,6 @@ class MqttCommService implements IHardwareComm {
       _reconnectAttempts = 0;
       _subscribeTopics();
       _listenMessages();
-      _statusController.add(
-        const HardwareMessage(type: HardwareConfig.statusConnected, payload: {}),
-      );
       Logger.info('[MQTT] 已连接 EMQX broker');
       return true;
     }
@@ -87,8 +73,11 @@ class MqttCommService implements IHardwareComm {
 
   void _subscribeTopics() {
     if (_client == null) return;
-    _client!.subscribe(HardwareConfig.topicDeviceToApp, MqttQos.atLeastOnce);
-    Logger.info('[MQTT] 已订阅 ${HardwareConfig.topicDeviceToApp}');
+    _client!.subscribe(HardwareConfig.topicStatusState, _qos);
+    _client!.subscribe(HardwareConfig.topicStatusPosition, _qos);
+    _client!.subscribe(HardwareConfig.topicStatusError, _qos);
+    _client!.subscribe(HardwareConfig.topicStatusOcr, _qos);
+    Logger.info('[MQTT] 已订阅 4 个状态 Topic');
   }
 
   void _listenMessages() {
@@ -101,19 +90,17 @@ class MqttCommService implements IHardwareComm {
       final payloadStr = MqttPublishPayload.bytesToStringAsString(msg.payload.message);
       Logger.debug('[MQTT] 收到 ← [$topic] $payloadStr');
 
-      if (topic == HardwareConfig.topicDeviceToApp) {
-        try {
-          final hwMsg = HardwareMessage.fromJsonString(payloadStr);
-          _statusController.add(hwMsg);
-        } catch (e) {
-          Logger.error('[MQTT] 消息解析失败: $e, raw=$payloadStr');
-        }
+      try {
+        final hwMsg = HardwareMessage.fromJsonString(payloadStr);
+        _statusController.add(hwMsg);
+      } catch (e) {
+        Logger.error('[MQTT] 消息解析失败: $e, raw=$payloadStr');
       }
     }
   }
 
   void _onConnected() {
-    Logger.info('[MQTT] onConnected 回调');
+    Logger.info('[MQTT] onConnected');
     _connected = true;
     _reconnectAttempts = 0;
   }
@@ -176,44 +163,48 @@ class MqttCommService implements IHardwareComm {
 
   @override
   Future<bool> initialize() async {
-    Logger.info('[MQTT] 发送设备初始化指令...');
-    _publish({'type': 'CMD_INIT', 'payload': {}});
-    await Future.delayed(const Duration(seconds: 1));
-    Logger.info('[MQTT] 初始化完成');
+    Logger.info('[MQTT] 初始化设备...');
+    _publishCmd(CmdReset().toJson());
+    await Future.delayed(const Duration(milliseconds: 500));
+    _publishCmd(CmdHome().toJson());
     return true;
   }
 
   @override
   Future<void> startPrint() async {
-    Logger.info('[MQTT] 开始打印');
-    _publish(CmdStartPrint().toJson());
+    _publishCmd(CmdStartPrint().toJson());
   }
 
   @override
   Future<void> stopPrint() async {
-    Logger.info('[MQTT] 停止打印');
-    _publish(CmdStopPrint().toJson());
+    _publishCmd(CmdStopPrint().toJson());
   }
 
   @override
   Future<void> emergencyStop() async {
-    Logger.info('[MQTT] 紧急停止');
-    _publish(CmdEmergencyStop().toJson());
+    _publishCmd(CmdEmergencyStop().toJson());
   }
 
-  void _publish(Map<String, dynamic> message) {
+  void _publishCmd(Map<String, dynamic> message) {
     if (!_connected || _client == null) {
-      Logger.warn('[MQTT] 未连接，无法发布消息');
+      Logger.warn('[MQTT] 未连接，无法发布');
       return;
     }
     final jsonStr = jsonEncode(message);
     final builder = MqttClientPayloadBuilder();
     builder.addString(jsonStr);
-    _client!.publishMessage(
-      HardwareConfig.topicAppToDevice,
-      MqttQos.atLeastOnce,
-      builder.payload!,
-    );
-    Logger.debug('[MQTT] 发布 → [${HardwareConfig.topicAppToDevice}] $jsonStr');
+    final payload = builder.payload!;
+    _client!.publishMessage(HardwareConfig.topicCmdPrint, _qos, payload);
+    _client!.publishMessage(HardwareConfig.topicCmdControl, _qos, payload);
+    Logger.debug('[MQTT] 发布 → ${message['type']}');
+  }
+
+  void publishMessage(String topic, Map<String, dynamic> message) {
+    if (!_connected || _client == null) return;
+    final jsonStr = jsonEncode(message);
+    final builder = MqttClientPayloadBuilder();
+    builder.addString(jsonStr);
+    _client!.publishMessage(topic, _qos, builder.payload!);
+    Logger.debug('[MQTT] 发布 → [$topic] $jsonStr');
   }
 }

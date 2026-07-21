@@ -1,16 +1,19 @@
-# 板端硬件通信接口对接文档 (v2.0 — MQTT 协议)
+# 板端硬件通信接口对接文档 (v3.0 — 基于正式 MQTT 协议)
 
 ## 通信架构
 
 ```
-硬件 (elf2 主控板)
-  │ MQTT (TCP 1883)
-  │ JSON {"type":"CMD_XXX","payload":{...}}
+硬件 (RK3588 主控板)
+  │ MQTT (TCP 1883, QoS 0)
+  │ JSON {"type":"...","payload":{...},"ts":...,"src":"..."}
+  ▼
+EMQX Broker (broker.emqx.io:1883)
+  │
   ▼
 IHardwareComm (抽象接口)
-  ├── MqttCommService  ← 主通道，待接入 mqtt_client 库
-  ├── BleCommService   ← BLE 备用
-  └── WifiCommService  ← WiFi 备用
+  ├── MqttCommService  ← 已完整实现
+  ├── BleCommService   ← BLE 备用 (桩代码)
+  └── WifiCommService  ← WiFi 备用 (桩代码)
   │
   ▼
 HardwareManager (单例，管理模式切换)
@@ -19,7 +22,7 @@ HardwareManager (单例，管理模式切换)
 DeviceNotifier (状态管理)
   │
   ▼
-UI (HomePage / ControlPanel)
+UI (HomePage / DeviceManagePage)
 ```
 
 ## MQTT 配置
@@ -27,141 +30,127 @@ UI (HomePage / ControlPanel)
 文件: `lib/core/constants/hardware_config.dart`
 
 ```dart
-static const String mqttBrokerHost = '192.168.xx.xx'; // 待定
+static const String mqttBrokerHost = 'broker.emqx.io';
 static const int mqttPort = 1883;
-static const int mqttQos = 1;
+static const int mqttQos = 0;
 static const String mqttClientId = 'bisheng_app';
-
-static const String topicAppToDevice = 'bisheng/cmd';
-static const String topicDeviceToApp = 'bisheng/status';
+static const int keepAlivePeriod = 60;       // 板端: 60s
+static const int reconnectDelayMs = 3000;
+static const int maxReconnectAttempts = 10;
+static const String deviceId = 'printer1878561109';
 ```
+
+## Topic 总览
+
+### App 订阅 (板子发布)
+
+| Topic | 消息 type | 说明 |
+|-------|----------|------|
+| `printer1878561109/status/state` | `STATUS_STATE`, `STATUS_PROGRESS` | 状态变更 + 打印进度 |
+| `printer1878561109/status/position` | `STATUS_POSITION` | 三轴电机位置 (脉冲) |
+| `printer1878561109/status/error` | `STATUS_ERROR` | 错误上报 |
+| `printer1878561109/status/ocr` | `STATUS_OCR_RESULT` | OCR 识别结果 |
+
+> `printer1878561109/status/heartbeat` — 预留，暂未启用
+
+### App 发布 (板子订阅)
+
+| Topic | 消息 type | 说明 |
+|-------|----------|------|
+| `printer1878561109/cmd/print` | `CMD_*`, `TEXT_BATCH` | 打印指令 + 文字输入 |
+| `printer1878561109/cmd/control` | `CMD_*` | 控制指令 |
+
+> App 命令同时发布到 `cmd/print` 和 `cmd/control` 两个 Topic，板子均可接收。
 
 ## 消息格式
 
-所有通信使用 JSON 字符串，结构固定为：
+所有消息使用统一 JSON 信封：
 
 ```json
-{"type": "CMD_XXX", "payload": {...}}
-```
-
-模型定义: `lib/data/hardware/comm_protocol.dart`
-
-### 下行命令 (APP → 硬件)
-
-| type | payload | 说明 |
-|------|---------|------|
-| `CMD_START_PRINT` | `{}` | 开始打印 |
-| `CMD_STOP_PRINT` | `{}` | 停止打印 |
-| `CMD_EMERGENCY_STOP` | `{}` | 紧急停止 |
-
-> `CMD_PAUSE_PRINT` / `CMD_RESUME_PRINT` 板端有 bug，已从 App 侧移除，不再通过硬件层发送。
-
-### 上行状态 (硬件 → APP)
-
-| type | payload | 说明 |
-|------|---------|------|
-| `STATUS_PROGRESS` | `{"current":15, "total":100, "percentage":15.0}` | 打印进度 |
-| `STATUS_ERROR` | `{"code":"MOTOR_FAULT", "msg":"X1 轴电机通信超时"}` | 错误信息 |
-| `STATUS_IDLE` | `{"message":"设备就绪"}` | 空闲待机 |
-| `STATUS_CONNECTED` | `{}` | 连接成功 |
-
-## 接口定义
-
-文件: `lib/data/hardware/comm_interface.dart`
-
-```dart
-abstract class IHardwareComm {
-  Future<bool> connect(String deviceIdOrAddress);
-  Future<void> disconnect();
-  Future<bool> initialize();
-  Future<void> startPrint();
-  Future<void> stopPrint();
-  Future<void> emergencyStop();
-  Stream<HardwareMessage> get deviceStatusStream;
+{
+  "type": "CMD_START_PRINT",
+  "payload": {},
+  "src": "external"
 }
 ```
 
-`HardwareMessage` 结构：
-```dart
-class HardwareMessage {
-  final String type;
-  final Map<String, dynamic> payload;
-  factory HardwareMessage.fromJsonString(String raw);
-  String toJsonString();
-}
+- `type` — 消息类型标识 (必填)
+- `payload` — 消息负载 (必填，可为空 `{}`)
+- `src` — 来源标识 (App 统一填 `"external"`)
+- `ts` — 时间戳，板端出站消息自动填充 (App 入站不填)
+
+## 命令类型 (App → 板子)
+
+| type | payload | 说明 |
+|------|---------|------|
+| `CMD_START_PRINT` | `{}` | 开始打印 / 确认换页 |
+| `CMD_STOP_PRINT` | `{}` | 停止打印，清空队列 |
+| `CMD_EMERGENCY_STOP` | `{}` | 急停 (优先级最高) |
+| `CMD_HOME` | `{}` | 三轴回零 |
+| `CMD_RESET` | `{}` | 复位，清空队列恢复 IDLE |
+| `CMD_STOP_OCR` | `{}` | 停止 OCR 循环 |
+| `CMD_TRIGGER_TURN_PAGE` | `{}` | 触发翻页 |
+| `TEXT_BATCH` | `{"text": "..."}` | 文字输入 |
+
+> `CMD_PAUSE_PRINT` / `CMD_RESUME_PRINT` — 板端有 bug，App 侧已移除
+
+## 状态类型 (板子 → App)
+
+| type | payload | 说明 |
+|------|---------|------|
+| `STATUS_STATE` | `{"new_state": "IDLE"/"PRINTING"/"ERROR", "reason": "..."}` | 状态变更 |
+| `STATUS_PROGRESS` | `{"current": 42, "total": 100, "percentage": 42.0}` | 逐字进度 |
+| `STATUS_POSITION` | `{"y1": 153600, "y2": 153600, "x": 256000}` | 电机脉冲位置 |
+| `STATUS_ERROR` | `{"code": "WATCHDOG_TIMEOUT", "msg": "..."}` | 错误上报 |
+| `STATUS_OCR_RESULT` | `{"text": "...", "blocks": 3, "total_chars": 1250}` | OCR 结果 |
+
+## 指令优先级
+
+| 优先级 | 指令 |
+|--------|------|
+| 0 (最高) | `CMD_EMERGENCY_STOP` |
+| 1 | `CMD_HOME` |
+| 2 | `CMD_STOP_PRINT` |
+| 5 | `CMD_START_PRINT` |
+| 6 | `CMD_RESET` |
+
+## 典型交互流程
+
+```
+App                          板子
+ |                             |
+ |── CMD_START_PRINT ─────────>|
+ |                             |── STATUS_STATE(new_state=PRINTING)
+ |                             |── STATUS_PROGRESS(current=1, total=20)
+ |                             |── STATUS_POSITION(y1=153600, ...)
+ |                             |── STATUS_PROGRESS(current=20, total=20)
+ |                             |── STATUS_STATE(new_state=IDLE)
 ```
 
-## 需要修改的文件
+## 测试方法
 
-只需替换以下 3 个文件的 TODO 部分为真实实现：
+### mosquitto 测试连通性
 
-| 文件 | 需要做什么 |
-|------|-----------|
-| `mqtt_comm_service.dart` | 引入 `mqtt_client` 库，实现 MQTT connect/publish/subscribe |
-| `ble_comm_service.dart` | 引入 `flutter_blue_plus`，实现 BLE scan/connect/notify/write |
-| `wifi_comm_service.dart` | 引入 `dart:io` Socket，实现 TCP 连接和数据收发 |
-| `hardware_config.dart` | 修改 `mqttBrokerHost` 为实际地址 |
-
-**其余文件无需修改：**
-- `comm_interface.dart` — 接口已固定
-- `comm_protocol.dart` — 协议模型已固定
-- `hardware_manager.dart` — 管理器已固定
-- `device_provider.dart` — 状态管理已对接 `HardwareMessage` Stream
-
-## MQTT 通信 stub 实现详情
-
-文件: `lib/data/hardware/mqtt_comm_service.dart`
-
-```dart
-// 实际接入 mqtt_client 的步骤（已在代码中以 TODO 标注）：
-// 1. import 'package:mqtt_client/mqtt_client.dart';
-// 2. connect(): 创建 MqttServerClient, 连接到 broker
-// 3. 订阅 topicDeviceToApp, 监听消息
-// 4. 收到消息后: HardwareMessage.fromJsonString(msg) → _statusController.add()
-// 5. _publish(): client.publishMessage() 发送 JSON 到 topicAppToDevice
+```bash
+mosquitto_sub -h broker.emqx.io -p 1883 -t "printer1878561109/status/+" -v
 ```
 
-## Stream 到 UI 的数据流
+### 模拟板子发消息
 
-```
-MQTT 消息 (JSON 字符串)
-  → HardwareMessage.fromJsonString(raw)
-  → _statusController.add(message)
-  → DeviceNotifier.bindStatusStream(stream) 监听
-  → 根据 message.type 分发:
-    - STATUS_PROGRESS → DeviceState.applyProgress(p) → UI 显示进度条
-    - STATUS_ERROR → DeviceState(status: error, statusMessage: "...") → UI 显示错误
+```bash
+mosquitto_pub -h broker.emqx.io -p 1883 -t "printer1878561109/status/state" -m '{"type":"STATUS_STATE","payload":{"new_state":"IDLE","reason":"test"},"ts":1752650123.456,"src":"test"}'
 ```
 
-## MQTT Broker 设置参考
+### Flutter App 测试
 
-elf2 主控板通常内置 MQTT broker，默认地址为板子 IP，端口 1883。连接方式：
+进入设备管理页面，选择 MQTT 模式，点击连接按钮。日志输出：
 
-```dart
-// 手机连接到板子的 WiFi 热点后，MQTT broker = 板子 IP
-final ip = '192.168.4.1'; // 常见默认网关
-manager.switchMode(CommMode.mqtt);
-await manager.connect(ip);
 ```
-
-## 调试辅助
-
-所有通信代码已内置 Logger 桩点：
+[MQTT] 正在连接 broker.emqx.io:1883
+[MQTT] 已连接 EMQX broker
+[MQTT] 已订阅 4 个状态 Topic
+[MQTT] onSubscribed → printer1878561109/status/state
+[MQTT] onSubscribed → printer1878561109/status/position
+[MQTT] onSubscribed → printer1878561109/status/error
+[MQTT] onSubscribed → printer1878561109/status/ocr
 ```
-[MQTT] Connecting to 192.168.4.1:1883
-[MQTT] Connected
-[MQTT] Publish → CMD_START_PRINT
-[MQTT] Subscribe ← STATUS_PROGRESS {current: 15, total: 100}
-```
-
-## 对接检查清单
-
-- [ ] `mqtt_client` 库引入并实现 MQTT 连接
-- [ ] `hardware_config.dart` 中 `mqttBrokerHost` 改为实际地址
-- [ ] Topic 发布/订阅与板端约定一致
-- [ ] JSON 解析容错（`HardwareMessage.fromJsonString`）
-- [ ] `STATUS_PROGRESS` → UI 进度条正常更新
-- [ ] `STATUS_ERROR` → UI 错误提示正常显示
-- [ ] `CMD_EMERGENCY_STOP` 急停优先级最高
-- [ ] 连接超时和断线重连处理
-- [ ] Android 真机测试（WiFi + BLE 权限）
