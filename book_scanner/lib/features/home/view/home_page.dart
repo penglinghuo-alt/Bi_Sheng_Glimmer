@@ -53,7 +53,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
 
     ref.listen(deviceProvider, (prev, next) {
-      if (prev == next) return;
       final notifier = ref.read(homeProvider.notifier);
 
       if (next.boardState != null && next.boardState != _lastBoardState) {
@@ -70,9 +69,10 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
       }
 
-      if (prev.motorX != next.motorX ||
-          prev.motorY1 != next.motorY1 ||
-          prev.motorY2 != next.motorY2) {
+      if (prev != null &&
+          (prev.motorX != next.motorX ||
+           prev.motorY1 != next.motorY1 ||
+           prev.motorY2 != next.motorY2)) {
         if (next.motorX != 0 || next.motorY1 != 0 || next.motorY2 != 0) {
           notifier.onMotorPosition(
             next.motorX.toDouble(),
@@ -82,17 +82,17 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
       }
 
-      if (next.ocrText != null && next.ocrText != prev.ocrText) {
+      if (next.ocrText != null && next.ocrText != prev?.ocrText) {
         notifier.onOcrResult(next.ocrText!, next.ocrTotalChars);
       }
 
       if (next.status == DeviceStatus.error &&
-          prev.status != DeviceStatus.error) {
+          prev?.status != DeviceStatus.error) {
         notifier.onDeviceError('DEVICE', next.statusMessage);
       }
 
       if (next.currentStep == PrintStep.completed &&
-          prev.currentStep != PrintStep.completed) {
+          prev?.currentStep != PrintStep.completed) {
         notifier.onPrintComplete();
       }
     });
