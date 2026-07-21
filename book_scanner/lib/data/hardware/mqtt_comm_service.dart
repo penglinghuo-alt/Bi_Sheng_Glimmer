@@ -37,8 +37,7 @@ class MqttCommService implements IHardwareComm {
     final host = brokerAddress.isNotEmpty ? brokerAddress : HardwareConfig.mqttBrokerHost;
 
     if (kIsWeb) {
-      _client = MqttBrowserClient('ws://$host', HardwareConfig.mqttClientId);
-      _client!.port = _port;
+      _client = MqttBrowserClient('ws://$host:$_port/mqtt', HardwareConfig.mqttClientId);
       (_client as MqttBrowserClient).websocketProtocols = ['mqtt'];
     } else {
       _client = MqttServerClient.withPort(host, HardwareConfig.mqttClientId, _port);
