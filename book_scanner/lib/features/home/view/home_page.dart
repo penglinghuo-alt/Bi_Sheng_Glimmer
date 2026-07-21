@@ -17,30 +17,84 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   final ScrollController _logScrollCtrl = ScrollController();
+  String? _lastBoardState;
+  int _lastProgressCurrent = -1;
+  int _lastProgressTotal = -1;
 
   @override
   void dispose() {
     _logScrollCtrl.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final homeState = ref.watch(homeProvider);
     final deviceState = ref.watch(deviceProvider);
-    final isInitializing = homeState.isInitializing;
-    final isWorking = homeState.isWorking;
+
+    final isConnected = deviceState.status == DeviceStatus.connected ||
+        deviceState.status == DeviceStatus.initialized ||
+        deviceState.status == DeviceStatus.working ||
+        deviceState.status == DeviceStatus.printing ||
+        deviceState.status == DeviceStatus.paused;
+
+    final isBusy = deviceState.status == DeviceStatus.connecting ||
+        deviceState.status == DeviceStatus.initializing;
+    final isWorking = deviceState.status == DeviceStatus.working ||
+        deviceState.status == DeviceStatus.printing;
 
     ref.listen(homeProvider.select((s) => s.logs.length), (_, __) {
       _scrollToBottom();
     });
 
-    ref.listen(homeProvider.select((s) => s.showReadyDialog), (_, show) {
-      if (show) _showReadyDialog();
-    });
-
     ref.listen(homeProvider.select((s) => s.showPaperDialog), (_, show) {
       if (show) _showPaperDialog();
+    });
+
+    ref.listen(deviceProvider, (prev, next) {
+      if (prev == next) return;
+      final notifier = ref.read(homeProvider.notifier);
+
+      if (next.boardState != null && next.boardState != _lastBoardState) {
+        _lastBoardState = next.boardState;
+        notifier.onDeviceStateChanged(next.boardState!);
+      }
+
+      if (next.progressCurrent != _lastProgressCurrent ||
+          next.progressTotal != _lastProgressTotal) {
+        _lastProgressCurrent = next.progressCurrent;
+        _lastProgressTotal = next.progressTotal;
+        if (next.progressTotal > 0) {
+          notifier.onProgressUpdate(next.progressCurrent, next.progressTotal);
+        }
+      }
+
+      if (prev.motorX != next.motorX ||
+          prev.motorY1 != next.motorY1 ||
+          prev.motorY2 != next.motorY2) {
+        if (next.motorX != 0 || next.motorY1 != 0 || next.motorY2 != 0) {
+          notifier.onMotorPosition(
+            next.motorX.toDouble(),
+            next.motorY1.toDouble(),
+            next.motorY2.toDouble(),
+          );
+        }
+      }
+
+      if (next.ocrText != null && next.ocrText != prev.ocrText) {
+        notifier.onOcrResult(next.ocrText!, next.ocrTotalChars);
+      }
+
+      if (next.status == DeviceStatus.error &&
+          prev.status != DeviceStatus.error) {
+        notifier.onDeviceError('DEVICE', next.statusMessage);
+      }
+
+      if (next.currentStep == PrintStep.completed &&
+          prev.currentStep != PrintStep.completed) {
+        notifier.onPrintComplete();
+      }
     });
 
     return Scaffold(
@@ -58,28 +112,28 @@ class _HomePageState extends ConsumerState<HomePage> {
         child: Column(children: [
           Expanded(
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.all(24),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 _greeting(theme),
                 const SizedBox(height: 24),
-                _modeSelector(theme, homeState, isWorking || isInitializing),
-                if (homeState.selectedMode == PrintMode.localFile && !isWorking && !isInitializing) ...[
+                _modeSelector(theme, homeState, isBusy || isWorking),
+                if (homeState.selectedMode == PrintMode.localFile && !isBusy && !isWorking) ...[
                   const SizedBox(height: 16),
                   _filePicker(theme, homeState),
                 ],
                 const SizedBox(height: 24),
-                if (isInitializing) _initLoadingCard(theme),
-                if (isWorking || homeState.currentStep != PrintStep.idle) ...[
+                if (isBusy) _busyIndicator(theme, deviceState),
+                if (isConnected) ...[
                   const SizedBox(height: 12),
+                  _deviceInfoCard(theme, deviceState),
                 ],
-                if (!isInitializing) _actionArea(theme, homeState),
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                _actionArea(theme, homeState, deviceState, isConnected, isBusy, isWorking),
               ]),
             ),
           ),
-          if (isWorking || homeState.currentStep != PrintStep.idle)
-            _logPanel(theme, homeState),
+          if (isWorking || deviceState.currentStep != PrintStep.idle)
+            _logPanel(theme, homeState, isWorking),
         ]),
       ),
     );
@@ -224,7 +278,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _initLoadingCard(ThemeData theme) {
+  Widget _busyIndicator(ThemeData theme, DeviceState deviceState) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -239,28 +293,106 @@ class _HomePageState extends ConsumerState<HomePage> {
           child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary)),
         ),
         const SizedBox(height: 16),
-        Text('正在准备机器...', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        Text('扫描头校准、纸张检测、机械臂归零', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+        Text(deviceState.statusMessage, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
       ]),
     );
   }
 
-  Widget _actionArea(ThemeData theme, HomeState homeState) {
-    final canStart = homeState.selectedMode == PrintMode.scanAndPrint || homeState.selectedRecord != null;
+  Widget _deviceInfoCard(ThemeData theme, DeviceState d) {
+    final items = <Widget>[];
+
+    if (d.boardState != null && d.boardState!.isNotEmpty) {
+      items.add(_infoRow(theme, '板子状态', d.boardState!, Icons.memory_rounded));
+    }
+    if (d.progressTotal > 0) {
+      items.add(_infoRow(theme, '打印进度', '${d.progressCurrent}/${d.progressTotal} (${(d.progressPercentage * 100).toStringAsFixed(0)}%)', Icons.speed_rounded));
+      items.add(const SizedBox(height: 4));
+      items.add(ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: LinearProgressIndicator(
+          value: d.progressPercentage,
+          minHeight: 6,
+        ),
+      ));
+    }
+    if (d.motorX != 0 || d.motorY1 != 0 || d.motorY2 != 0) {
+      items.add(const SizedBox(height: 8));
+      items.add(_infoRow(theme, '电机位置', 'X:${d.motorX}  Y1:${d.motorY1}  Y2:${d.motorY2}', Icons.settings_rounded));
+    }
+    if (d.ocrText != null && d.ocrText!.isNotEmpty) {
+      items.add(const SizedBox(height: 8));
+      items.add(_infoRow(theme, 'OCR 识别', '${d.ocrTotalChars} 字符', Icons.text_fields_rounded));
+    }
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('设备状态', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+          const SizedBox(height: 10),
+          ...items,
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(ThemeData theme, String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        Icon(icon, size: 16, color: theme.colorScheme.primary),
+        const SizedBox(width: 8),
+        Text('$label: ', style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+        Expanded(
+          child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        ),
+      ]),
+    );
+  }
+
+  Widget _actionArea(ThemeData theme, HomeState homeState, DeviceState deviceState,
+      bool isConnected, bool isBusy, bool isWorking) {
+    final canStart = (homeState.selectedMode == PrintMode.scanAndPrint || homeState.selectedRecord != null) && isConnected;
+
     return Column(children: [
       SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
-          onPressed: canStart ? () => ref.read(homeProvider.notifier).startWorking() : null,
+          onPressed: canStart
+              ? () {
+                  ref.read(homeProvider.notifier).startWorking();
+                  ref.read(deviceProvider.notifier).startPrintJob();
+                }
+              : null,
           icon: const Icon(Icons.play_arrow_rounded, size: 20),
-          label: const Text('开始工作', style: TextStyle(fontWeight: FontWeight.w600)),
+          label: Text(isWorking ? '工作中...' : '开始工作', style: const TextStyle(fontWeight: FontWeight.w600)),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ),
+      if (isWorking) ...[
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => ref.read(deviceProvider.notifier).emergencyStop(),
+          icon: const Icon(Icons.stop_rounded, size: 18, color: Colors.red),
+          label: const Text('紧急停止', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: Colors.red),
+            minimumSize: const Size(double.infinity, 48),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      ],
     ]);
   }
 
@@ -276,7 +408,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  Widget _logPanel(ThemeData theme, HomeState state) {
+  Widget _logPanel(ThemeData theme, HomeState state, bool isWorking) {
     final logs = state.logs;
     if (logs.isEmpty) return const SizedBox.shrink();
 
@@ -296,7 +428,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             const SizedBox(width: 8),
             Text('系统日志', style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'monospace')),
             const Spacer(),
-            if (state.isWorking) ...[
+            if (isWorking) ...[
               SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: const AlwaysStoppedAnimation<Color>(Colors.greenAccent))),
             ] else ...[
               Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle)),
@@ -328,47 +460,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ]),
     );
-  }
-
-  void _showReadyDialog() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          icon: Container(
-            width: 64, height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(Icons.check_circle_outline_rounded, color: AppColors.primary, size: 36),
-          ),
-          title: const Text('机器已准备完毕', style: TextStyle(fontWeight: FontWeight.w800), textAlign: TextAlign.center),
-          content: const Text('请放入纸张后点击确定开始打印', textAlign: TextAlign.center, style: TextStyle(fontSize: 15)),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  ref.read(homeProvider.notifier).confirmReady();
-                  ref.read(deviceProvider.notifier).startPrintJob();
-                },
-                icon: const Icon(Icons.print_rounded),
-                label: const Text('确定开始打印'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    });
   }
 
   void _showPaperDialog() {
