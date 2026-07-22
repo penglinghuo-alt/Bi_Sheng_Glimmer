@@ -42,7 +42,8 @@ class HomeState {
 class HomeNotifier extends StateNotifier<HomeState> {
   final DatabaseHelper _db = DatabaseHelper();
   int _jobCounter = 0;
-  int _totalPages = 0;
+  int _pageCount = 0;
+  final StringBuffer _ocrBuffer = StringBuffer();
 
   HomeNotifier() : super(const HomeState());
 
@@ -52,6 +53,15 @@ class HomeNotifier extends StateNotifier<HomeState> {
         '${ts.minute.toString().padLeft(2, '0')}:'
         '${ts.second.toString().padLeft(2, '0')}';
     state = state.copyWith(logs: [...state.logs, '[$t] $msg']);
+  }
+
+  Future<String?> _saveRecord(BrailleRecord record) async {
+    final serverId = await _db.saveToBackend(record);
+    if (serverId != null) {
+      _log('已同步到云端 (ID: $serverId)');
+    }
+    _db.addRecord(record);
+    return serverId ?? record.id;
   }
 
   void setMode(PrintMode mode) {
@@ -64,6 +74,8 @@ class HomeNotifier extends StateNotifier<HomeState> {
 
   void startWorking() {
     state = state.copyWith(logs: [], currentStep: PrintStep.idle, progress: 0.0);
+    _pageCount = 0;
+    _ocrBuffer.clear();
     _log('等待设备就绪...');
   }
 
@@ -80,7 +92,8 @@ class HomeNotifier extends StateNotifier<HomeState> {
       case 'ERROR':
         _log('设备报错');
       case 'PAGE_COMPLETE':
-        _log('当前页面打印完成');
+        _pageCount++;
+        _log('第 $_pageCount 页打印完成');
       default:
     }
   }
@@ -98,7 +111,11 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void onOcrResult(String text, int totalChars) {
-    _log('OCR 识别完成: $totalChars 字符');
+    if (_ocrBuffer.isNotEmpty) {
+      _ocrBuffer.write('\n');
+    }
+    _ocrBuffer.write(text);
+    _log('OCR 识别完成: $totalChars 字符 (累计 ${_ocrBuffer.length} 字符)');
   }
 
   void onDeviceError(String code, String msg) {
@@ -106,6 +123,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void onPrintComplete() {
+    final ocrText = _ocrBuffer.toString();
     _jobCounter++;
     final title = state.selectedMode == PrintMode.scanAndPrint
         ? '扫描文档_第$_jobCounter份'
@@ -118,11 +136,12 @@ class HomeNotifier extends StateNotifier<HomeState> {
       dotMatrixHeight: state.selectedMode == PrintMode.scanAndPrint ? 30 : 0,
       dotMatrixData: [],
       createdAt: DateTime.now(),
-      pageCount: _totalPages,
+      pageCount: _pageCount > 0 ? _pageCount : 1,
+      textContent: ocrText.isNotEmpty ? ocrText : null,
     );
-    _db.addRecord(record);
+    _saveRecord(record);
     state = state.copyWith(showPaperDialog: true, currentStep: PrintStep.completed, progress: 1.0);
-    _log('打印任务完成');
+    _log('打印任务完成，共 $_pageCount 页');
   }
 
   void showPaperDialog() {
@@ -134,21 +153,8 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void confirmPaperReady() {
-    _jobCounter++;
-    final title = state.selectedMode == PrintMode.scanAndPrint
-        ? '扫描文档_第$_jobCounter份'
-        : '打印文件_第$_jobCounter份';
-    final record = BrailleRecord(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title,
-      sourceType: state.selectedMode == PrintMode.scanAndPrint ? '现场扫描' : '本地文件',
-      dotMatrixWidth: state.selectedMode == PrintMode.scanAndPrint ? 40 : 0,
-      dotMatrixHeight: state.selectedMode == PrintMode.scanAndPrint ? 30 : 0,
-      dotMatrixData: [],
-      createdAt: DateTime.now(),
-      pageCount: _totalPages,
-    );
-    _db.addRecord(record);
+    _ocrBuffer.clear();
+    _pageCount = 0;
     state = state.copyWith(
       showPaperDialog: false,
       currentStep: PrintStep.idle,

@@ -87,6 +87,14 @@ class RepoListPage extends ConsumerWidget {
                 Text(record.title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
                 Text('${record.sourceType} / ${record.pageCount}页 / ${_timeAgo(record.createdAt)}', style: theme.textTheme.bodySmall),
+                if (record.textContent != null && record.textContent!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    record.textContent!.length > 40 ? '${record.textContent!.substring(0, 40)}...' : record.textContent!,
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ])),
               PopupMenuButton<String>(
                 onSelected: (action) {
