@@ -28,17 +28,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: RouteNames.login,
-        pageBuilder: (_, s) => CustomTransitionPage(
-          child: const LoginPage(),
-          transitionsBuilder: (ctx, animation, secondary, child) => FadeTransition(opacity: animation, child: child),
-        ),
+        pageBuilder: (_, s) => const NoTransitionPage(child: LoginPage()),
       ),
       GoRoute(
         path: RouteNames.register,
-        pageBuilder: (_, s) => CustomTransitionPage(
-          child: const RegisterPage(),
-          transitionsBuilder: (ctx, animation, secondary, child) => FadeTransition(opacity: animation, child: child),
-        ),
+        pageBuilder: (_, s) => const NoTransitionPage(child: RegisterPage()),
       ),
       ShellRoute(
         builder: (_, s, child) => _AppShell(child: child),
