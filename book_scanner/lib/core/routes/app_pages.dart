@@ -15,10 +15,14 @@ final authRedirectNotifier = ValueNotifier<bool>(false);
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     refreshListenable: authRedirectNotifier,
-    initialLocation: RouteNames.login,
     redirect: (context, state) {
       final isAuth = authRedirectNotifier.value;
       final loc = state.uri.toString();
+
+      if (loc == '/') {
+        return isAuth ? RouteNames.home : RouteNames.login;
+      }
+
       final isAuthRoute = loc == RouteNames.login || loc == RouteNames.register;
 
       if (!isAuth && !isAuthRoute) return RouteNames.login;
