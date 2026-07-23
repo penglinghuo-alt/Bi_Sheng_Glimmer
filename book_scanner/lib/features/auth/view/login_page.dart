@@ -73,6 +73,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 _registerLink(theme),
                 const SizedBox(height: 40),
               ]),
+            ),
           ),
         ),
       ),
