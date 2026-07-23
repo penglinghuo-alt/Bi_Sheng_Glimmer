@@ -184,7 +184,7 @@ class MqttCommService implements IHardwareComm {
 
   @override
   Future<void> sendText(String text) async {
-    _publishCmd(TextBatch(text: text).toJson());
+    _publishSingle(HardwareConfig.topicCmdPrint, TextBatch(text: text).toJson());
   }
 
   @override
@@ -202,14 +202,29 @@ class MqttCommService implements IHardwareComm {
     _publishCmd(CmdEmergencyStop().toJson());
   }
 
+  void _publishSingle(String topic, Map<String, dynamic> message) {
+    if (!_connected || _client == null) return;
+    final jsonStr = jsonEncode(message);
+    final bytes = utf8.encode(jsonStr);
+    final builder = MqttClientPayloadBuilder();
+    for (final b in bytes) {
+      builder.addByte(b);
+    }
+    _client!.publishMessage(topic, _qos, builder.payload!);
+    Logger.debug('[MQTT] 发布 → ${message['type']} → $topic');
+  }
+
   void _publishCmd(Map<String, dynamic> message) {
     if (!_connected || _client == null) {
       Logger.warn('[MQTT] 未连接，无法发布');
       return;
     }
     final jsonStr = jsonEncode(message);
+    final bytes = utf8.encode(jsonStr);
     final builder = MqttClientPayloadBuilder();
-    builder.addString(jsonStr);
+    for (final b in bytes) {
+      builder.addByte(b);
+    }
     final payload = builder.payload!;
     _client!.publishMessage(HardwareConfig.topicCmdPrint, _qos, payload);
     _client!.publishMessage(HardwareConfig.topicCmdControl, _qos, payload);
@@ -219,8 +234,11 @@ class MqttCommService implements IHardwareComm {
   void publishMessage(String topic, Map<String, dynamic> message) {
     if (!_connected || _client == null) return;
     final jsonStr = jsonEncode(message);
+    final bytes = utf8.encode(jsonStr);
     final builder = MqttClientPayloadBuilder();
-    builder.addString(jsonStr);
+    for (final b in bytes) {
+      builder.addByte(b);
+    }
     _client!.publishMessage(topic, _qos, builder.payload!);
     Logger.debug('[MQTT] 发布 → [$topic] $jsonStr');
   }
