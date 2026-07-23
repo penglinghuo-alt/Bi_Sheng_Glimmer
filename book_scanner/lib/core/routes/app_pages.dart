@@ -28,43 +28,37 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: RouteNames.login,
-        pageBuilder: (_, s) => const NoTransitionPage(child: LoginPage()),
+        builder: (_, state) => const LoginPage(),
       ),
       GoRoute(
         path: RouteNames.register,
-        pageBuilder: (_, s) => const NoTransitionPage(child: RegisterPage()),
+        builder: (_, state) => const RegisterPage(),
       ),
       ShellRoute(
         builder: (_, s, child) => _AppShell(child: child),
         routes: [
           GoRoute(
             path: RouteNames.home,
-            pageBuilder: (_, s) => const NoTransitionPage(child: HomePage()),
+            builder: (_, state) => const HomePage(),
           ),
           GoRoute(
             path: RouteNames.repository,
-            pageBuilder: (_, s) => const NoTransitionPage(child: RepoListPage()),
+            builder: (_, state) => const RepoListPage(),
           ),
           GoRoute(
             path: RouteNames.profile,
-            pageBuilder: (_, s) => const NoTransitionPage(child: ProfilePage()),
+            builder: (_, state) => const ProfilePage(),
           ),
           GoRoute(
             path: '/preview',
-            pageBuilder: (_, state) {
+            builder: (_, state) {
               final recordId = state.uri.queryParameters['id'] ?? '';
-              return CustomTransitionPage(
-                child: PreviewPage(recordId: recordId),
-                transitionsBuilder: (ctx, animation, secondary, child) => FadeTransition(opacity: animation, child: child),
-              );
+              return PreviewPage(recordId: recordId);
             },
           ),
           GoRoute(
             path: RouteNames.deviceManage,
-            pageBuilder: (_, s) => CustomTransitionPage(
-              child: const DeviceManagePage(),
-              transitionsBuilder: (ctx, animation, secondary, child) => FadeTransition(opacity: animation, child: child),
-            ),
+            builder: (_, state) => const DeviceManagePage(),
           ),
         ],
       ),
