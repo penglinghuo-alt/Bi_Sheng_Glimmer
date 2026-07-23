@@ -225,10 +225,8 @@ class MqttCommService implements IHardwareComm {
     for (final b in bytes) {
       builder.addByte(b);
     }
-    final payload = builder.payload!;
-    _client!.publishMessage(HardwareConfig.topicCmdPrint, _qos, payload);
-    _client!.publishMessage(HardwareConfig.topicCmdControl, _qos, payload);
-    Logger.debug('[MQTT] 发布 → ${message['type']}');
+    _client!.publishMessage(HardwareConfig.topicCmdPrint, _qos, builder.payload!);
+    Logger.debug('[MQTT] 发布 → [${HardwareConfig.topicCmdPrint}] ${message['type']}');
   }
 
   void publishMessage(String topic, Map<String, dynamic> message) {
