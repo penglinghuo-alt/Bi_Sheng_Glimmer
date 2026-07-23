@@ -72,15 +72,13 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
               label: '直接打印',
               icon: Icons.print_rounded,
               onPressed: () async {
-                final hw = ref.read(hardwareManagerProvider);
                 final text = record.textContent;
                 if (text != null && text.isNotEmpty) {
-                  await hw.sendText(text);
+                  await ref.read(hardwareManagerProvider).sendText(text);
                 }
-                await hw.startPrint();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: const Text('已发送文字数据 + 打印指令到 MQTT Broker'), behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                    SnackBar(content: const Text('已发送文字数据到 MQTT Broker'), behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                   );
                 }
               },
