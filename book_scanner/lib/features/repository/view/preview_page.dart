@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/models/braille_record.dart';
 import '../../../../shared/widgets/accessible_button.dart';
+import '../../../../core/providers/hardware_provider.dart';
 import '../providers/repo_provider.dart';
 
 class PreviewPage extends ConsumerStatefulWidget {
@@ -71,8 +72,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
               label: '直接打印',
               icon: Icons.print_rounded,
               onPressed: () {
+                ref.read(hardwareManagerProvider).startPrint();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: const Text('已发送打印指令'), behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  SnackBar(content: const Text('已发送打印指令到 MQTT Broker'), behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                 );
               },
               fullWidth: true,
