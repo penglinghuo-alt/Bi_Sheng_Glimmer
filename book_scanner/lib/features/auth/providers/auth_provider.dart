@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/models/user_model.dart';
 import '../../../../data/services/api_client.dart';
@@ -24,7 +25,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final ApiClient _api = ApiClient();
 
   AuthNotifier() : super(const AuthState()) {
-    _tryAutoLogin();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tryAutoLogin();
+    });
   }
 
   Future<void> _tryAutoLogin() async {
