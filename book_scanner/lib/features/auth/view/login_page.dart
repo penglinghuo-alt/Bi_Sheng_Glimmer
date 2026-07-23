@@ -11,27 +11,16 @@ class LoginPage extends ConsumerStatefulWidget {
   ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailCtrl = TextEditingController(text: 'test_admin');
   final _pwdCtrl = TextEditingController(text: '123456');
   final _formKey = GlobalKey<FormState>();
   bool _obscure = true;
-  late AnimationController _anim;
-  late Animation<double> _fade;
-
-  @override
-  void initState() {
-    super.initState();
-    _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
-    _fade = CurvedAnimation(parent: _anim, curve: Curves.easeOut);
-    _anim.forward();
-  }
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _pwdCtrl.dispose();
-    _anim.dispose();
     super.dispose();
   }
 
@@ -71,23 +60,19 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: FadeTransition(
-                opacity: _fade,
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const SizedBox(height: 40),
-                  _logo(theme),
-                  const SizedBox(height: 16),
-                  _title(theme),
-                  const SizedBox(height: 6),
-                  _subtitle(theme),
-                  const SizedBox(height: 42),
-                  _card(theme, isDark, authState),
-                  const SizedBox(height: 24),
-                  _registerLink(theme),
-                  const SizedBox(height: 40),
-                ]),
-              ),
-            ),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const SizedBox(height: 40),
+                _logo(theme),
+                const SizedBox(height: 16),
+                _title(theme),
+                const SizedBox(height: 6),
+                _subtitle(theme),
+                const SizedBox(height: 42),
+                _card(theme, isDark, authState),
+                const SizedBox(height: 24),
+                _registerLink(theme),
+                const SizedBox(height: 40),
+              ]),
           ),
         ),
       ),
