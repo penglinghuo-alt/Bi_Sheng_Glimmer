@@ -232,6 +232,24 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
     );
   }
 
+  Future<void> startPrintWithText(String text) async {
+    if (text.isEmpty) {
+      state = state.copyWith(
+        statusMessage: '文字内容为空',
+      );
+      return;
+    }
+    await _hwManager.sendText(text);
+    state = state.copyWith(
+      status: DeviceStatus.working,
+      currentStep: PrintStep.printing,
+      progressCurrent: 0,
+      progressTotal: 0,
+      progressPercentage: 0,
+    );
+    Logger.debug('[Device] 本地文件模式: 已下发 TEXT_BATCH (${text.length}字符)');
+  }
+
   /// 仅更新本地 UI 状态——板端 CMD_PAUSE_PRINT 有 bug，不应通过硬件层发送
   Future<void> pausePrint() async {
     state = state.copyWith(status: DeviceStatus.paused, currentStep: PrintStep.paused, statusMessage: '已暂停');

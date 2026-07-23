@@ -369,7 +369,12 @@ class _HomePageState extends ConsumerState<HomePage> {
           onPressed: canStart
               ? () {
                   ref.read(homeProvider.notifier).startWorking();
-                  ref.read(deviceProvider.notifier).startPrintJob();
+                  if (homeState.selectedMode == PrintMode.localFile) {
+                    final text = homeState.selectedRecord?.textContent ?? '';
+                    ref.read(deviceProvider.notifier).startPrintWithText(text);
+                  } else {
+                    ref.read(deviceProvider.notifier).startPrintJob();
+                  }
                 }
               : null,
           icon: const Icon(Icons.play_arrow_rounded, size: 20),
