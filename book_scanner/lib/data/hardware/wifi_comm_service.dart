@@ -44,6 +44,11 @@ class WifiCommService implements IHardwareComm {
   }
 
   @override
+  Future<void> sendText(String text) async {
+    _send(TextBatch(text: text).toJson());
+  }
+
+  @override
   Future<void> startPrint() async {
     Logger.info('[WiFi] Start print');
     _send(CmdStartPrint().toJson());

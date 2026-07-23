@@ -6,6 +6,7 @@ abstract class IHardwareComm {
   Future<void> disconnect();
 
   Future<bool> initialize();
+  Future<void> sendText(String text);
   Future<void> startPrint();
   Future<void> stopPrint();
   Future<void> emergencyStop();

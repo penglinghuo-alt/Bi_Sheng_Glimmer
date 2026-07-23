@@ -46,6 +46,11 @@ class BleCommService implements IHardwareComm {
   }
 
   @override
+  Future<void> sendText(String text) async {
+    _write(TextBatch(text: text).toJson());
+  }
+
+  @override
   Future<void> startPrint() async {
     Logger.info('[BLE] Start print');
     _write(CmdStartPrint().toJson());

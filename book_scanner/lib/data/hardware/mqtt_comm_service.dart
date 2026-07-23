@@ -183,6 +183,11 @@ class MqttCommService implements IHardwareComm {
   }
 
   @override
+  Future<void> sendText(String text) async {
+    _publishCmd(TextBatch(text: text).toJson());
+  }
+
+  @override
   Future<void> startPrint() async {
     _publishCmd(CmdStartPrint().toJson());
   }

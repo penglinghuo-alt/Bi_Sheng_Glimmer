@@ -53,6 +53,10 @@ class HardwareManager {
     _currentComm = null;
   }
 
+  Future<void> sendText(String text) async {
+    await _currentComm?.sendText(text);
+  }
+
   Future<void> startPrint() async {
     await _currentComm?.startPrint();
   }
