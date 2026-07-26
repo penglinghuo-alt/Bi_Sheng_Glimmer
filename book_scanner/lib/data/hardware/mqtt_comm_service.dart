@@ -3,13 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
-import 'package:mqtt_client/mqtt_browser_client.dart';
 
 import 'comm_interface.dart';
 import 'comm_protocol.dart';
 import '../../../core/constants/hardware_config.dart';
 import '../../../core/utils/logger.dart';
+import 'mqtt_client_factory_io.dart'
+    if (dart.library.html) 'mqtt_client_factory_web.dart';
 
 class MqttCommService implements IHardwareComm {
   MqttClient? _client;
@@ -36,14 +36,7 @@ class MqttCommService implements IHardwareComm {
 
     final host = brokerAddress.isNotEmpty ? brokerAddress : HardwareConfig.mqttBrokerHost;
 
-    if (kIsWeb) {
-      const wsPort = 8083;
-      _client = MqttBrowserClient('ws://$host:$wsPort/mqtt', HardwareConfig.mqttClientId);
-      _client!.port = wsPort;
-      (_client as MqttBrowserClient).websocketProtocols = ['mqtt'];
-    } else {
-      _client = MqttServerClient.withPort(host, HardwareConfig.mqttClientId, _port);
-    }
+    _client = createMqttClient(host, HardwareConfig.mqttClientId, _port);
 
     _client!.logging(on: false);
     _client!.keepAlivePeriod = HardwareConfig.keepAlivePeriod;
