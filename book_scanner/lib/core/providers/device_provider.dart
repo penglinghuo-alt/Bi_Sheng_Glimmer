@@ -102,11 +102,26 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
       switch (msg.type) {
         case StatusState.type:
           final s = StatusState.fromPayload(msg.payload);
-          state = state.copyWith(
-            boardState: s.newState,
-            statusMessage: '设备: ${s.newState} ${s.reason ?? ""}'.trimRight(),
-            status: _boardStateToDeviceStatus(s.newState),
-          );
+          final inProgress = state.currentStep == PrintStep.turningPage ||
+              state.currentStep == PrintStep.capturing ||
+              state.currentStep == PrintStep.recognizing ||
+              state.currentStep == PrintStep.converting ||
+              state.currentStep == PrintStep.printing ||
+              state.currentStep == PrintStep.paused;
+          if (s.newState == 'IDLE' && inProgress) {
+            state = state.copyWith(
+              boardState: s.newState,
+              status: DeviceStatus.connected,
+              statusMessage: '打印完成，请取出盲文纸',
+              currentStep: PrintStep.completed,
+            );
+          } else {
+            state = state.copyWith(
+              boardState: s.newState,
+              statusMessage: '设备: ${s.newState} ${s.reason ?? ""}'.trimRight(),
+              status: _boardStateToDeviceStatus(s.newState),
+            );
+          }
         case StatusProgress.type:
           final p = StatusProgress.fromPayload(msg.payload);
           state = state.applyProgress(p);

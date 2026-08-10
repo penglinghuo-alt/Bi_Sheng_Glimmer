@@ -58,10 +58,13 @@ class HomeNotifier extends StateNotifier<HomeState> {
   Future<String?> _saveRecord(BrailleRecord record) async {
     final serverId = await _db.saveToBackend(record);
     if (serverId != null) {
-      _log('已同步到云端 (ID: $serverId)');
+      _log('已上传至腾讯云 (ID: $serverId)');
+      _db.addRecord(record.copyWith(id: serverId));
+      return serverId;
     }
+    _log('云端同步失败，记录仅保存在本地');
     _db.addRecord(record);
-    return serverId ?? record.id;
+    return record.id;
   }
 
   void setMode(PrintMode mode) {

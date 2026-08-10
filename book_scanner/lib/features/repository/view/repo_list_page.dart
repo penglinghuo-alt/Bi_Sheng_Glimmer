@@ -96,19 +96,47 @@ class RepoListPage extends ConsumerWidget {
                   ),
                 ],
               ])),
+              IconButton(
+                tooltip: '删除记录',
+                icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                onPressed: () => _confirmDelete(context, ref, record),
+              ),
               PopupMenuButton<String>(
                 onSelected: (action) {
                   if (action == 'rename') _showRenameDialog(context, ref, record);
-                  if (action == 'delete') ref.read(repoProvider.notifier).deleteRecord(record.id);
                 },
                 itemBuilder: (_) => [
                   const PopupMenuItem(value: 'rename', child: Row(children: [Icon(Icons.edit_rounded, size: 18), SizedBox(width: 8), Text('重命名')])),
-                  const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('删除', style: TextStyle(color: AppColors.error))])),
                 ],
               ),
             ]),
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, BrailleRecord record) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('删除记录'),
+        content: Text('确定删除「${record.title}」吗？删除后本地与云端数据将一并清除。', style: const TextStyle(fontSize: 15)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(repoProvider.notifier).deleteRecord(record.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('记录已删除'), behavior: SnackBarBehavior.floating),
+              );
+            },
+            child: const Text('删除'),
+          ),
+        ],
       ),
     );
   }
