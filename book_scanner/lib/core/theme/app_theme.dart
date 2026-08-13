@@ -54,6 +54,8 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'sans-serif',
+      fontFamilyFallback: const ['Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'SimHei'],
       colorScheme: cs,
       scaffoldBackgroundColor: AppColors.surfaceLight,
       brightness: Brightness.light,
@@ -151,6 +153,8 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'sans-serif',
+      fontFamilyFallback: const ['Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'SimHei'],
       colorScheme: cs,
       scaffoldBackgroundColor: AppColors.surfaceDark,
       brightness: Brightness.dark,
