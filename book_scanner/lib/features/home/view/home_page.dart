@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_enums.dart';
+import '../../../../core/constants/hardware_config.dart';
 import '../../../../core/providers/device_provider.dart';
 import '../../../../shared/widgets/device_status_bar.dart';
 import '../../../../data/local_db/database_helper.dart';
 import '../../../../data/models/braille_record.dart';
 import '../providers/home_provider.dart';
+import '../widgets/braille_board_view.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -132,10 +134,62 @@ class _HomePageState extends ConsumerState<HomePage> {
               ]),
             ),
           ),
-          if (isWorking || deviceState.currentStep != PrintStep.idle)
+          if (isWorking || deviceState.currentStep != PrintStep.idle) ...[
+            _brailleBoardCard(theme, homeState),
             _logPanel(theme, homeState, isWorking),
+          ],
         ]),
       ),
+    );
+  }
+
+  Widget _brailleBoardCard(ThemeData theme, HomeState state) {
+    final ratio = state.paperUsedRatio;
+    final nearEnd = ratio >= 0.85;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        border: Border(top: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.2))),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.grid_on_rounded, size: 14, color: Colors.greenAccent),
+          const SizedBox(width: 8),
+          Text('盲文板点位', style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'monospace')),
+          const Spacer(),
+          Text(
+            '已使用 ${(ratio * 100).toStringAsFixed(0)}%',
+            style: TextStyle(color: nearEnd ? Colors.orangeAccent : Colors.greenAccent.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'monospace'),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 200,
+          child: Center(child: BrailleBoardView(litDots: state.litDots, showBorder: false)),
+        ),
+        if (nearEnd) ...[
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.orangeAccent.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.5)),
+            ),
+            child: const Row(children: [
+              Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orangeAccent),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('盲文纸即将用完，请准备更换新纸',
+                    style: TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'monospace')),
+              ),
+            ]),
+          ),
+        ],
+      ]),
     );
   }
 

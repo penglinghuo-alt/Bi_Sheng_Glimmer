@@ -116,7 +116,9 @@ class _DeviceManagePageState extends ConsumerState<DeviceManagePage> {
         ),
         const SizedBox(height: 4),
         Text(
-          isConnected ? (deviceState.connectedDeviceId ?? '') : '点击下方按钮连接设备',
+          isConnected ? (deviceState.statusMessage.isNotEmpty
+              ? deviceState.statusMessage
+              : (deviceState.connectedDeviceId ?? '')) : '点击下方按钮连接设备',
           style: theme.textTheme.bodyMedium,
         ),
         if (isConnected && deviceState.statusMessage.isNotEmpty) ...[

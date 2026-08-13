@@ -69,7 +69,7 @@ class DeviceStatusBar extends ConsumerWidget {
     }
 
     return Semantics(
-      label: '设备状态: $label',
+      label: '设备状态: $label${deviceState.boardOnline ? '，板端已连接' : ''}',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
@@ -106,6 +106,24 @@ class DeviceStatusBar extends ConsumerWidget {
                 fontSize: 14,
               ),
             ),
+            if (deviceState.boardOnline) ...[
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '板端已连接',
+                  style: TextStyle(
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

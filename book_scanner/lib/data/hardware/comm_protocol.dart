@@ -182,6 +182,49 @@ class StatusOcrResult {
   }
 }
 
+// ─── 设备上线通知 (STATUS_ONLINE) ────────────────
+/// 板端首次连接 MQTT Broker 后发布的扁平 JSON（不走通用 type/payload 包裹）
+class StatusOnline {
+  final String event;
+  final String messageId;
+  final String timestamp;
+  final String clientId;
+  final String configVersion;
+  final Map<String, dynamic> services;
+  final String healthStatus;
+  final Map<String, dynamic> healthChecks;
+  final int uptimeMs;
+
+  const StatusOnline({
+    required this.event,
+    required this.messageId,
+    required this.timestamp,
+    required this.clientId,
+    required this.configVersion,
+    required this.services,
+    required this.healthStatus,
+    required this.healthChecks,
+    required this.uptimeMs,
+  });
+
+  bool get isDeviceOnline => event == 'device_online';
+
+  factory StatusOnline.fromRawJson(Map<String, dynamic> json) {
+    final health = Map<String, dynamic>.from(json['health'] ?? {});
+    return StatusOnline(
+      event: json['event'] ?? '',
+      messageId: json['message_id'] ?? '',
+      timestamp: json['timestamp'] ?? '',
+      clientId: json['client_id'] ?? '',
+      configVersion: json['config_version'] ?? '',
+      services: Map<String, dynamic>.from(json['services'] ?? {}),
+      healthStatus: health['status'] ?? '',
+      healthChecks: Map<String, dynamic>.from(health['checks'] ?? {}),
+      uptimeMs: json['uptime_ms'] ?? 0,
+    );
+  }
+}
+
 // ─── 通用消息 ─────────────────────────────────────
 class HardwareMessage {
   final String type;

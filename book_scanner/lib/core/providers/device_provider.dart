@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_enums.dart';
+import '../../core/constants/hardware_config.dart';
 import '../../data/services/api_client.dart';
 import '../../data/hardware/comm_protocol.dart';
 import '../../data/hardware/hardware_manager.dart';
@@ -24,6 +25,11 @@ class DeviceState {
   final String? ocrText;
   final int ocrTotalChars;
 
+  /// 板端是否已上线 (收到 STATUS_ONLINE 才为 true)
+  final bool boardOnline;
+  final String? boardClientId;
+  final String? boardHealth;
+
   const DeviceState({
     this.status = DeviceStatus.disconnected,
     this.statusMessage = '未连接',
@@ -39,6 +45,9 @@ class DeviceState {
     this.motorY2 = 0,
     this.ocrText,
     this.ocrTotalChars = 0,
+    this.boardOnline = false,
+    this.boardClientId,
+    this.boardHealth,
   });
 
   DeviceState copyWith({
@@ -58,6 +67,10 @@ class DeviceState {
     String? ocrText,
     bool clearOcrText = false,
     int? ocrTotalChars,
+    bool? boardOnline,
+    String? boardClientId,
+    String? boardHealth,
+    bool clearBoardOnline = false,
   }) {
     return DeviceState(
       status: status ?? this.status,
@@ -74,6 +87,9 @@ class DeviceState {
       motorY2: motorY2 ?? this.motorY2,
       ocrText: clearOcrText ? null : (ocrText ?? this.ocrText),
       ocrTotalChars: ocrTotalChars ?? this.ocrTotalChars,
+      boardOnline: clearBoardOnline ? false : (boardOnline ?? this.boardOnline),
+      boardClientId: boardClientId ?? this.boardClientId,
+      boardHealth: boardHealth ?? this.boardHealth,
     );
   }
 
@@ -141,6 +157,18 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
             ocrTotalChars: r.totalChars,
           );
           Logger.info('[Device] OCR 识别结果: ${r.totalChars} 字符');
+        case HardwareConfig.statusOnline:
+          final online = StatusOnline.fromRawJson(msg.payload);
+          if (online.isDeviceOnline) {
+            state = state.copyWith(
+              boardOnline: true,
+              boardClientId: online.clientId,
+              boardHealth: online.healthStatus,
+              status: DeviceStatus.connected,
+              statusMessage: '打印机已连接 (${online.clientId})',
+            );
+            Logger.info('[Device] 板端上线: client=${online.clientId} health=${online.healthStatus}');
+          }
       }
     });
   }
@@ -177,6 +205,7 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
             connectedDeviceId: deviceId,
             clearBoardState: true,
             clearOcrText: true,
+            clearBoardOnline: true,
             motorX: 0,
             motorY1: 0,
             motorY2: 0,

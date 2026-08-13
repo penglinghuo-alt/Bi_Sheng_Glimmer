@@ -81,7 +81,8 @@ class MqttCommService implements IHardwareComm {
     _client!.subscribe(HardwareConfig.topicStatusPosition, _qos);
     _client!.subscribe(HardwareConfig.topicStatusError, _qos);
     _client!.subscribe(HardwareConfig.topicStatusOcr, _qos);
-    Logger.info('[MQTT] 已订阅 4 个状态 Topic');
+    _client!.subscribe(HardwareConfig.topicStatusOnline, MqttQos.atLeastOnce);
+    Logger.info('[MQTT] 已订阅 5 个状态 Topic (含 online)');
   }
 
   void _listenMessages() {
@@ -96,12 +97,40 @@ class MqttCommService implements IHardwareComm {
       Logger.debug('[MQTT] 收到 ← [$topic] $payloadStr');
 
       try {
-        final hwMsg = HardwareMessage.fromJsonString(payloadStr);
+        final hwMsg = _parseMessage(topic, payloadStr);
         _statusController.add(hwMsg);
       } catch (e) {
         Logger.error('[MQTT] 消息解析失败: $e, raw=$payloadStr');
       }
     }
+  }
+
+  /// 统一解析入口: online 主题为扁平 JSON (event/message_id/...),
+  /// 其余主题为通用信封 (type/payload)。
+  HardwareMessage _parseMessage(String topic, String payloadStr) {
+    final map = jsonDecode(payloadStr) as Map<String, dynamic>;
+
+    if (topic == HardwareConfig.topicStatusOnline) {
+      final online = StatusOnline.fromRawJson(map);
+      return HardwareMessage(
+        type: HardwareConfig.statusOnline,
+        payload: {
+          'event': online.event,
+          'message_id': online.messageId,
+          'timestamp': online.timestamp,
+          'client_id': online.clientId,
+          'config_version': online.configVersion,
+          'services': online.services,
+          'health': {
+            'status': online.healthStatus,
+            'checks': online.healthChecks,
+          },
+          'uptime_ms': online.uptimeMs,
+        },
+      );
+    }
+
+    return HardwareMessage.fromJsonString(payloadStr);
   }
 
   void _onConnected() {

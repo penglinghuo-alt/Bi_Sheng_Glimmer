@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_enums.dart';
+import '../../../core/constants/hardware_config.dart';
 import '../../../data/models/braille_record.dart';
 import '../../../data/local_db/database_helper.dart';
 
@@ -10,6 +11,8 @@ class HomeState {
   final double progress;
   final List<String> logs;
   final BrailleRecord? selectedRecord;
+  final Set<int> litDots;
+  final double paperUsedRatio;
 
   const HomeState({
     this.selectedMode = PrintMode.scanAndPrint,
@@ -18,6 +21,8 @@ class HomeState {
     this.progress = 0.0,
     this.logs = const [],
     this.selectedRecord,
+    this.litDots = const {},
+    this.paperUsedRatio = 0.0,
   });
 
   HomeState copyWith({
@@ -27,6 +32,8 @@ class HomeState {
     double? progress,
     List<String>? logs,
     BrailleRecord? selectedRecord,
+    Set<int>? litDots,
+    double? paperUsedRatio,
   }) {
     return HomeState(
       selectedMode: selectedMode ?? this.selectedMode,
@@ -35,6 +42,8 @@ class HomeState {
       progress: progress ?? this.progress,
       logs: logs ?? this.logs,
       selectedRecord: selectedRecord ?? this.selectedRecord,
+      litDots: litDots ?? this.litDots,
+      paperUsedRatio: paperUsedRatio ?? this.paperUsedRatio,
     );
   }
 }
@@ -44,6 +53,9 @@ class HomeNotifier extends StateNotifier<HomeState> {
   int _jobCounter = 0;
   int _pageCount = 0;
   final StringBuffer _ocrBuffer = StringBuffer();
+  final Set<int> _litDots = {};
+  double _maxPaperRatio = 0.0;
+  bool _paperWarningLogged = false;
 
   HomeNotifier() : super(const HomeState());
 
@@ -79,6 +91,9 @@ class HomeNotifier extends StateNotifier<HomeState> {
     state = state.copyWith(logs: [], currentStep: PrintStep.idle, progress: 0.0);
     _pageCount = 0;
     _ocrBuffer.clear();
+    _litDots.clear();
+    _maxPaperRatio = 0.0;
+    _paperWarningLogged = false;
     _log('等待设备就绪...');
   }
 
@@ -111,6 +126,36 @@ class HomeNotifier extends StateNotifier<HomeState> {
 
   void onMotorPosition(double x, double y1, double y2) {
     _log('电机位置 - X: ${x.toStringAsFixed(0)}, Y1: ${y1.toStringAsFixed(0)}, Y2: ${y2.toStringAsFixed(0)}');
+
+    final cols = HardwareConfig.boardDotColumns;
+    final rows = HardwareConfig.boardDotRows;
+    final maxX = HardwareConfig.motorMaxXPulse.toDouble();
+    final maxY = HardwareConfig.motorMaxYPulse.toDouble();
+
+    if (maxX <= 0 || maxY <= 0) return;
+
+    // x -> 横坐标列, y -> 竖坐标行 (y 使用 y1/y2 均值，避免单边误差)
+    final yAvg = (y1 + y2) / 2;
+    final col = (x / maxX * cols).round().clamp(0, cols - 1).toInt();
+    final row = (yAvg / maxY * rows).round().clamp(0, rows - 1).toInt();
+
+    final idx = row * cols + col;
+    _litDots.add(idx);
+
+    // 纸张使用比例: 以竖向推进为准
+    final ratio = (yAvg / maxY).clamp(0.0, 1.0);
+    if (ratio > _maxPaperRatio) _maxPaperRatio = ratio;
+
+    state = state.copyWith(
+      litDots: Set.of(_litDots),
+      paperUsedRatio: _maxPaperRatio,
+    );
+
+    // 接近底部提示快换纸 (一次只提示一次)
+    if (_maxPaperRatio >= 0.85 && !_paperWarningLogged) {
+      _paperWarningLogged = true;
+      _log('注意: 盲文纸已使用 ${(_maxPaperRatio * 100).toStringAsFixed(0)}%，请准备更换新纸');
+    }
   }
 
   void onOcrResult(String text, int totalChars) {
@@ -158,14 +203,22 @@ class HomeNotifier extends StateNotifier<HomeState> {
   void confirmPaperReady() {
     _ocrBuffer.clear();
     _pageCount = 0;
+    _litDots.clear();
+    _maxPaperRatio = 0.0;
+    _paperWarningLogged = false;
     state = state.copyWith(
       showPaperDialog: false,
       currentStep: PrintStep.idle,
       progress: 0.0,
+      litDots: const {},
+      paperUsedRatio: 0.0,
     );
   }
 
   void reset() {
+    _litDots.clear();
+    _maxPaperRatio = 0.0;
+    _paperWarningLogged = false;
     state = const HomeState();
   }
 }

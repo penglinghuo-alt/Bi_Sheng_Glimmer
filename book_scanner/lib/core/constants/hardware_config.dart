@@ -24,6 +24,9 @@ class HardwareConfig {
   /// OCR 识别结果 (STATUS_OCR_RESULT)
   static const String topicStatusOcr = 'printer1878561109/status/ocr';
 
+  /// 设备上线通知 (STATUS_ONLINE, QoS=1, 板端首次连接 broker 时发布)
+  static const String topicStatusOnline = 'printer1878561109/status/online';
+
   /// 心跳——文档标注预留，暂未启用
   // static const String topicStatusHeartbeat = 'printer1878561109/status/heartbeat';
 
@@ -54,6 +57,20 @@ class HardwareConfig {
   static const String statusPosition = 'STATUS_POSITION';
   static const String statusError = 'STATUS_ERROR';
   static const String statusOcrResult = 'STATUS_OCR_RESULT';
+  static const String statusOnline = 'STATUS_ONLINE';
+
+  // ─── 盲文板规格 (点阵) ──────────────────────────
+  /// 盲文点阵: 竖 27 点 × 横 24 点
+  /// 每个盲文字符为 2 列 × 3 行共 6 点
+  /// => 横 12 字符列 (24/2), 竖 9 字符行 (27/3)
+  static const int boardDotColumns = 24;
+  static const int boardDotRows = 27;
+
+  // ─── 电机坐标最大脉冲值 (归一化用, 可配置) ───────
+  /// STATUS_POSITION 中 x / y1 / y2 的脉冲最大值
+  /// 用于把脉冲坐标映射到盲文板点阵行列
+  static const int motorMaxXPulse = 256000;
+  static const int motorMaxYPulse = 153600;
 
   // ─── BLE/WiFi 内部状态 (桩代码使用) ─────────────
   static const String statusConnected = 'STATUS_CONNECTED';
