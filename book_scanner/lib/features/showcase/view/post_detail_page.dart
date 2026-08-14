@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/route_names.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/local_db/database_helper.dart';
+import '../../../data/models/braille_record.dart';
 import '../../../data/models/post_comment.dart';
 import '../../../data/models/showcase_post.dart';
 import '../../../data/services/api_client.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../repository/providers/repo_provider.dart';
 import '../providers/post_detail_provider.dart';
 import '../providers/showcase_provider.dart';
 
@@ -20,6 +23,7 @@ class PostDetailPage extends ConsumerStatefulWidget {
 
 class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   final _commentController = TextEditingController();
+  bool _downloading = false;
 
   @override
   void initState() {
@@ -156,9 +160,45 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     );
   }
 
+  Future<void> _downloadToRepository() async {
+    final post = ref.read(postDetailProvider).post;
+    if (post == null || _downloading) return;
+    setState(() => _downloading = true);
+    try {
+      final record = BrailleRecord(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: post.title,
+        sourceType: post.sourceType,
+        dotMatrixWidth: 0,
+        dotMatrixHeight: 0,
+        dotMatrixData: [],
+        textContent: post.textContent?.isNotEmpty == true ? post.textContent : null,
+        pageCount: post.pageCount,
+        createdAt: DateTime.now(),
+        sourcePostId: post.id,
+      );
+      final db = DatabaseHelper();
+      final serverId = await db.saveToBackend(record);
+      db.addRecord(record.copyWith(id: serverId ?? record.id));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已保存到存储库'), behavior: SnackBarBehavior.floating),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('下载失败，请稍后重试'), behavior: SnackBarBehavior.floating),
+      );
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
+  }
+
   Widget _interactionBar(ThemeData theme, ShowcasePost post) {
     final currentUserId = ref.watch(authProvider).user?.id;
     final isMine = post.author.id == currentUserId;
+    final alreadyDownloaded = ref.watch(repoProvider).records
+        .any((r) => r.sourcePostId == post.id);
     return Row(children: [
       Expanded(
         child: _actionButton(
@@ -193,6 +233,26 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
             () => _confirmDeletePost(theme),
           ),
         ),
+      ] else ...[
+        const SizedBox(width: 12),
+        Expanded(
+          child: _actionButton(
+            theme,
+            _downloading
+                ? Icons.hourglass_top_rounded
+                : alreadyDownloaded
+                    ? Icons.download_done_rounded
+                    : Icons.download_rounded,
+            _downloading
+                ? '下载中'
+                : alreadyDownloaded
+                    ? '已下载'
+                    : '下载到存储库',
+            alreadyDownloaded,
+            theme.colorScheme.primary,
+            alreadyDownloaded || _downloading ? null : _downloadToRepository,
+          ),
+        ),
       ],
     ]);
   }
@@ -203,11 +263,12 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     String label,
     bool active,
     Color activeColor,
-    VoidCallback onTap,
+    VoidCallback? onTap,
   ) {
-    final color = active ? activeColor : theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final baseColor = active ? activeColor : theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final color = onTap == null ? baseColor.withValues(alpha: 0.4) : baseColor;
     return Semantics(
-      button: true,
+      button: onTap != null,
       label: label,
       child: InkWell(
         onTap: onTap,

@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from dotenv import load_dotenv
 
@@ -25,6 +25,21 @@ class Base(DeclarativeBase):
     pass
 
 
+def _migrate_schema():
+    try:
+        inspector = inspect(engine)
+        if "braille_records" not in inspector.get_table_names():
+            return
+        columns = {c["name"] for c in inspector.get_columns("braille_records")}
+        if "source_post_id" in columns:
+            return
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE braille_records ADD COLUMN source_post_id VARCHAR(64) DEFAULT NULL"))
+        print("[DB] Migration: added source_post_id column to braille_records")
+    except Exception as e:
+        print(f"[DB] Migration skipped: {e}")
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -35,3 +50,4 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    _migrate_schema()

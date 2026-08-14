@@ -32,6 +32,7 @@ class BrailleRecord(Base):
     dot_matrix_data = Column(JSON, default=[])
     text_content = Column(Text, nullable=True)
     page_count = Column(Integer, default=1)
+    source_post_id = Column(String(64), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 

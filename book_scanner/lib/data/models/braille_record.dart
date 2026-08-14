@@ -8,6 +8,7 @@ class BrailleRecord {
   final String? textContent;
   final DateTime createdAt;
   final int pageCount;
+  final String? sourcePostId;
 
   const BrailleRecord({
     required this.id,
@@ -19,6 +20,7 @@ class BrailleRecord {
     required this.createdAt,
     this.textContent,
     this.pageCount = 1,
+    this.sourcePostId,
   });
 
   BrailleRecord copyWith({
@@ -31,6 +33,7 @@ class BrailleRecord {
     String? textContent,
     DateTime? createdAt,
     int? pageCount,
+    String? sourcePostId,
   }) {
     return BrailleRecord(
       id: id ?? this.id,
@@ -42,6 +45,7 @@ class BrailleRecord {
       textContent: textContent ?? this.textContent,
       createdAt: createdAt ?? this.createdAt,
       pageCount: pageCount ?? this.pageCount,
+      sourcePostId: sourcePostId ?? this.sourcePostId,
     );
   }
 
@@ -55,6 +59,7 @@ class BrailleRecord {
         'text_content': textContent,
         'created_at': createdAt.toIso8601String(),
         'page_count': pageCount,
+        'source_post_id': sourcePostId,
       };
 
   factory BrailleRecord.fromJson(Map<String, dynamic> json) {
@@ -68,6 +73,7 @@ class BrailleRecord {
       textContent: json['text_content'],
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       pageCount: json['page_count'] ?? 1,
+      sourcePostId: json['source_post_id'],
     );
   }
 }
