@@ -125,6 +125,11 @@ class ApiClient {
     return res.data;
   }
 
+  Future<Map<String, dynamic>> updateRecordText(String id, String text) async {
+    final res = await _dio.put('/api/records/$id', data: {'text_content': text});
+    return res.data;
+  }
+
   Future<void> deleteRecord(String id) async {
     await _dio.delete('/api/records/$id');
   }
@@ -184,6 +189,90 @@ class ApiClient {
 
   Future<Map<String, dynamic>> uploadLogs(List<String> logs) async {
     final res = await _dio.post('/api/logs/upload', data: {'logs': logs});
+    return res.data;
+  }
+
+  // ─── Showcase（展示区）────────────────────────────
+
+  Future<Map<String, dynamic>> getShowcasePosts({int page = 1, int pageSize = 20}) async {
+    final res = await _dio.get('/api/showcase/posts', queryParameters: {
+      'page': page,
+      'page_size': pageSize,
+    });
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> getShowcasePost(String id) async {
+    final res = await _dio.get('/api/showcase/posts/$id');
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> createShowcasePost(Map<String, dynamic> data) async {
+    final res = await _dio.post('/api/showcase/posts', data: data);
+    return res.data;
+  }
+
+  Future<void> deleteShowcasePost(String id) async {
+    await _dio.delete('/api/showcase/posts/$id');
+  }
+
+  Future<List<dynamic>> getUnpublishedRecords() async {
+    final res = await _dio.get('/api/showcase/posts/me/unpublished');
+    return res.data as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> likeShowcasePost(String id) async {
+    final res = await _dio.post('/api/showcase/posts/$id/like');
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> unlikeShowcasePost(String id) async {
+    final res = await _dio.delete('/api/showcase/posts/$id/like');
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> favoriteShowcasePost(String id) async {
+    final res = await _dio.post('/api/showcase/posts/$id/favorite');
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> unfavoriteShowcasePost(String id) async {
+    final res = await _dio.delete('/api/showcase/posts/$id/favorite');
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> getMyFavorites({int page = 1, int pageSize = 20}) async {
+    final res = await _dio.get('/api/showcase/favorites', queryParameters: {
+      'page': page,
+      'page_size': pageSize,
+    });
+    return res.data;
+  }
+
+  Future<List<dynamic>> getPostComments(String postId) async {
+    final res = await _dio.get('/api/showcase/posts/$postId/comments');
+    return res.data as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> addPostComment(String postId, String content) async {
+    final res = await _dio.post('/api/showcase/posts/$postId/comments', data: {'content': content});
+    return res.data;
+  }
+
+  Future<void> deletePostComment(int commentId) async {
+    await _dio.delete('/api/showcase/comments/$commentId');
+  }
+
+  Future<Map<String, dynamic>> getShowcaseUser(String userId) async {
+    final res = await _dio.get('/api/showcase/users/$userId');
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> getUserPosts(String userId, {int page = 1, int pageSize = 20}) async {
+    final res = await _dio.get('/api/showcase/users/$userId/posts', queryParameters: {
+      'page': page,
+      'page_size': pageSize,
+    });
     return res.data;
   }
 }

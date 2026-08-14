@@ -74,12 +74,14 @@ def create_record(req: BrailleRecordCreate, current_user: User = Depends(get_cur
     )
 
 
-@router.put("/{record_id}", response_model=BrailleRecordResponse, summary="重命名记录")
+@router.put("/{record_id}", response_model=BrailleRecordResponse, summary="重命名记录 / 更新文字内容")
 def rename_record(record_id: str, req: BrailleRecordRename, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     record = db.query(BrailleRecord).filter(BrailleRecord.id == record_id, BrailleRecord.user_id == current_user.id).first()
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="记录不存在")
-    record.title = req.title
+    record.title = req.title if req.title is not None else record.title
+    if req.text_content is not None:
+        record.text_content = req.text_content
     db.commit()
     db.refresh(record)
     return BrailleRecordResponse(

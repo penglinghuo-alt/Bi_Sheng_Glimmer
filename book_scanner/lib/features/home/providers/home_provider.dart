@@ -52,8 +52,8 @@ class HomeNotifier extends StateNotifier<HomeState> {
   final DatabaseHelper _db = DatabaseHelper();
   int _jobCounter = 0;
   int _pageCount = 0;
-  final StringBuffer _ocrBuffer = StringBuffer();
-  final Set<int> _litDots = {};
+  String _accumulatedOcr = '';
+  String? _lastSavedRecordId;
   double _maxPaperRatio = 0.0;
   bool _paperWarningLogged = false;
 
@@ -72,10 +72,18 @@ class HomeNotifier extends StateNotifier<HomeState> {
     if (serverId != null) {
       _log('已上传至腾讯云 (ID: $serverId)');
       _db.addRecord(record.copyWith(id: serverId));
+      _lastSavedRecordId = serverId;
+      if (_accumulatedOcr.isNotEmpty && _accumulatedOcr != record.textContent) {
+        _db.updateRecordText(serverId, _accumulatedOcr);
+      }
       return serverId;
     }
     _log('云端同步失败，记录仅保存在本地');
     _db.addRecord(record);
+    _lastSavedRecordId = record.id;
+    if (_accumulatedOcr.isNotEmpty && _accumulatedOcr != record.textContent) {
+      _db.updateRecordText(record.id, _accumulatedOcr);
+    }
     return record.id;
   }
 
@@ -90,8 +98,8 @@ class HomeNotifier extends StateNotifier<HomeState> {
   void startWorking() {
     state = state.copyWith(logs: [], currentStep: PrintStep.idle, progress: 0.0);
     _pageCount = 0;
-    _ocrBuffer.clear();
-    _litDots.clear();
+    _accumulatedOcr = '';
+    _lastSavedRecordId = null;
     _maxPaperRatio = 0.0;
     _paperWarningLogged = false;
     _log('等待设备就绪...');
@@ -127,27 +135,15 @@ class HomeNotifier extends StateNotifier<HomeState> {
   void onMotorPosition(double x, double y1, double y2) {
     _log('电机位置 - X: ${x.toStringAsFixed(0)}, Y1: ${y1.toStringAsFixed(0)}, Y2: ${y2.toStringAsFixed(0)}');
 
-    final cols = HardwareConfig.boardDotColumns;
-    final rows = HardwareConfig.boardDotRows;
-    final maxX = HardwareConfig.motorMaxXPulse.toDouble();
     final maxY = HardwareConfig.motorMaxYPulse.toDouble();
-
-    if (maxX <= 0 || maxY <= 0) return;
-
-    // x -> 横坐标列, y -> 竖坐标行 (y 使用 y1/y2 均值，避免单边误差)
-    final yAvg = (y1 + y2) / 2;
-    final col = (x / maxX * cols).round().clamp(0, cols - 1).toInt();
-    final row = (yAvg / maxY * rows).round().clamp(0, rows - 1).toInt();
-
-    final idx = row * cols + col;
-    _litDots.add(idx);
+    if (maxY <= 0) return;
 
     // 纸张使用比例: 以竖向推进为准
+    final yAvg = (y1 + y2) / 2;
     final ratio = (yAvg / maxY).clamp(0.0, 1.0);
     if (ratio > _maxPaperRatio) _maxPaperRatio = ratio;
 
     state = state.copyWith(
-      litDots: Set.of(_litDots),
       paperUsedRatio: _maxPaperRatio,
     );
 
@@ -159,19 +155,29 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void onOcrResult(String text, int totalChars) {
-    if (_ocrBuffer.isNotEmpty) {
-      _ocrBuffer.write('\n');
+    if (text.trim().isEmpty) return;
+    if (_accumulatedOcr.isNotEmpty) {
+      _accumulatedOcr += '\n';
     }
-    _ocrBuffer.write(text);
-    _log('OCR 识别完成: $totalChars 字符 (累计 ${_ocrBuffer.length} 字符)');
+    _accumulatedOcr += text;
+    _log('OCR 识别完成: $totalChars 字符 (累计 ${_accumulatedOcr.length} 字符)');
+
+    // 若打印已完成但 OCR 结果晚到，回写最近一次已保存记录，确保文字不丢
+    final savedId = _lastSavedRecordId;
+    if (savedId != null) {
+      _db.updateRecordText(savedId, _accumulatedOcr);
+    }
   }
 
   void onDeviceError(String code, String msg) {
     _log('设备错误 [$code]: $msg');
   }
 
+  void clearLogs() {
+    state = state.copyWith(logs: []);
+  }
+
   void onPrintComplete() {
-    final ocrText = _ocrBuffer.toString();
     _jobCounter++;
     final title = state.selectedMode == PrintMode.scanAndPrint
         ? '扫描文档_第$_jobCounter份'
@@ -185,8 +191,9 @@ class HomeNotifier extends StateNotifier<HomeState> {
       dotMatrixData: [],
       createdAt: DateTime.now(),
       pageCount: _pageCount > 0 ? _pageCount : 1,
-      textContent: ocrText.isNotEmpty ? ocrText : null,
+      textContent: _accumulatedOcr.isNotEmpty ? _accumulatedOcr : null,
     );
+    _lastSavedRecordId = record.id;
     _saveRecord(record);
     state = state.copyWith(showPaperDialog: true, currentStep: PrintStep.completed, progress: 1.0);
     _log('打印任务完成，共 $_pageCount 页');
@@ -201,9 +208,9 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void confirmPaperReady() {
-    _ocrBuffer.clear();
+    _accumulatedOcr = '';
+    _lastSavedRecordId = null;
     _pageCount = 0;
-    _litDots.clear();
     _maxPaperRatio = 0.0;
     _paperWarningLogged = false;
     state = state.copyWith(
@@ -216,7 +223,8 @@ class HomeNotifier extends StateNotifier<HomeState> {
   }
 
   void reset() {
-    _litDots.clear();
+    _accumulatedOcr = '';
+    _lastSavedRecordId = null;
     _maxPaperRatio = 0.0;
     _paperWarningLogged = false;
     state = const HomeState();

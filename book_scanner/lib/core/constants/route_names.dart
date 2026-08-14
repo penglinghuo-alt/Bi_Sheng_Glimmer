@@ -7,4 +7,9 @@ class RouteNames {
   static const String preview = '/preview';
   static const String profile = '/profile';
   static const String deviceManage = '/device-manage';
+  static const String showcase = '/showcase';
+  static const String postDetail = '/post-detail';
+  static const String userProfile = '/user-profile';
+  static const String publish = '/publish';
+  static const String favorites = '/favorites';
 }

@@ -64,6 +64,15 @@ class DatabaseHelper {
     }
   }
 
+  void updateRecordText(String id, String text) {
+    final idx = _records.indexWhere((r) => r.id == id);
+    if (idx != -1) {
+      _records[idx] = _records[idx].copyWith(textContent: text);
+      _notify();
+      _api.updateRecordText(id, text);
+    }
+  }
+
   Future<void> syncFromBackend() async {
     try {
       final data = await _api.getRecords();

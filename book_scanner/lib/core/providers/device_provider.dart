@@ -25,6 +25,9 @@ class DeviceState {
   final String? ocrText;
   final int ocrTotalChars;
 
+  /// OCR 结果序号，每次收到 STATUS_OCR_RESULT 递增，用于可靠识别"新结果"
+  final int ocrSeq;
+
   /// 板端是否已上线 (收到 STATUS_ONLINE 才为 true)
   final bool boardOnline;
   final String? boardClientId;
@@ -45,6 +48,7 @@ class DeviceState {
     this.motorY2 = 0,
     this.ocrText,
     this.ocrTotalChars = 0,
+    this.ocrSeq = 0,
     this.boardOnline = false,
     this.boardClientId,
     this.boardHealth,
@@ -67,6 +71,7 @@ class DeviceState {
     String? ocrText,
     bool clearOcrText = false,
     int? ocrTotalChars,
+    int? ocrSeq,
     bool? boardOnline,
     String? boardClientId,
     String? boardHealth,
@@ -87,6 +92,7 @@ class DeviceState {
       motorY2: motorY2 ?? this.motorY2,
       ocrText: clearOcrText ? null : (ocrText ?? this.ocrText),
       ocrTotalChars: ocrTotalChars ?? this.ocrTotalChars,
+      ocrSeq: ocrSeq ?? this.ocrSeq,
       boardOnline: clearBoardOnline ? false : (boardOnline ?? this.boardOnline),
       boardClientId: boardClientId ?? this.boardClientId,
       boardHealth: boardHealth ?? this.boardHealth,
@@ -155,6 +161,7 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
           state = state.copyWith(
             ocrText: r.text,
             ocrTotalChars: r.totalChars,
+            ocrSeq: state.ocrSeq + 1,
           );
           Logger.info('[Device] OCR 识别结果: ${r.totalChars} 字符');
         case HardwareConfig.statusOnline:
@@ -205,6 +212,7 @@ class DeviceNotifier extends StateNotifier<DeviceState> {
             connectedDeviceId: deviceId,
             clearBoardState: true,
             clearOcrText: true,
+            ocrSeq: 0,
             clearBoardOnline: true,
             motorX: 0,
             motorY1: 0,

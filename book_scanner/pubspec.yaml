@@ -25,6 +25,7 @@ dependencies:
 
   # Camera & Image
   image_picker: ^1.1.2
+  file_picker: ^8.1.2
 
   # Storage & Preferences
   path_provider: ^2.1.5

@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -48,3 +48,58 @@ class DeviceLog(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="logs")
+
+
+class ShowcasePost(Base):
+    __tablename__ = "showcase_posts"
+    __table_args__ = (UniqueConstraint("record_id", "user_id", name="uq_showcase_record_user"),)
+
+    id = Column(String(64), primary_key=True)
+    user_id = Column(String(64), ForeignKey("users.id"), nullable=False, index=True)
+    record_id = Column(String(64), ForeignKey("braille_records.id"), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", backref="showcase_posts")
+    record = relationship("BrailleRecord", backref="showcase_posts")
+
+    likes = relationship("PostLike", back_populates="post", cascade="all, delete-orphan")
+    favorites = relationship("PostFavorite", back_populates="post", cascade="all, delete-orphan")
+    comments = relationship("PostComment", back_populates="post", cascade="all, delete-orphan")
+
+
+class PostLike(Base):
+    __tablename__ = "showcase_post_likes"
+    __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_postlike_post_user"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(String(64), ForeignKey("showcase_posts.id"), nullable=False, index=True)
+    user_id = Column(String(64), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    post = relationship("ShowcasePost", back_populates="likes")
+
+
+class PostFavorite(Base):
+    __tablename__ = "showcase_post_favorites"
+    __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_postfav_post_user"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(String(64), ForeignKey("showcase_posts.id"), nullable=False, index=True)
+    user_id = Column(String(64), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    post = relationship("ShowcasePost", back_populates="favorites")
+
+
+class PostComment(Base):
+    __tablename__ = "showcase_post_comments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(String(64), ForeignKey("showcase_posts.id"), nullable=False, index=True)
+    user_id = Column(String(64), ForeignKey("users.id"), nullable=False)
+    content = Column(String(500), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    post = relationship("ShowcasePost", back_populates="comments")
+    user = relationship("User", backref="showcase_comments")

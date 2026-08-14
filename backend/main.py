@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 from database import init_db, SessionLocal
 from models import User, BrailleRecord
 from auth_utils import hash_password, generate_id
-from api.routers import auth, records, device, logs
+from api.routers import auth, records, device, logs, showcase
 from api.routers.auth import avatar_router
 
 
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
 def _seed_demo_user():
     db: Session = SessionLocal()
     try:
-        if db.query(User).filter(User.username == "test_admin").first() is None:
+        if db.query(User).filter(User.email == "test@bisheng.com").first() is None:
             db.add(User(
                 id=generate_id(),
                 username="test_admin",
@@ -67,9 +67,9 @@ _LIZU_TEXT = (
 def _seed_demo_record():
     db: Session = SessionLocal()
     try:
-        user = db.query(User).filter(User.username == "test_admin").first()
+        user = db.query(User).filter(User.email == "test@bisheng.com").first()
         if user is None:
-            print("[seed] test_admin not found, skipping record seed")
+            print("[seed] demo user not found, skipping record seed")
             return
         print(f"[seed] found user: {user.username} (id={user.id})")
         existing = db.query(BrailleRecord).filter(
@@ -117,6 +117,7 @@ app.include_router(auth.router)
 app.include_router(records.router)
 app.include_router(device.router)
 app.include_router(logs.router)
+app.include_router(showcase.router)
 app.include_router(avatar_router)
 
 import os

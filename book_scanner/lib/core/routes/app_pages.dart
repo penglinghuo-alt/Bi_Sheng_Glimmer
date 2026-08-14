@@ -9,6 +9,11 @@ import '../../features/repository/view/repo_list_page.dart';
 import '../../features/repository/view/preview_page.dart';
 import '../../features/profile/view/profile_page.dart';
 import '../../features/profile/view/device_manage_page.dart';
+import '../../features/showcase/view/showcase_page.dart';
+import '../../features/showcase/view/post_detail_page.dart';
+import '../../features/showcase/view/user_profile_page.dart';
+import '../../features/showcase/view/publish_page.dart';
+import '../../features/showcase/view/favorites_page.dart';
 
 final authRedirectNotifier = ValueNotifier<bool>(false);
 
@@ -50,6 +55,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => const RepoListPage(),
           ),
           GoRoute(
+            path: RouteNames.showcase,
+            builder: (_, state) => const ShowcasePage(),
+          ),
+          GoRoute(
             path: RouteNames.profile,
             builder: (_, state) => const ProfilePage(),
           ),
@@ -63,6 +72,28 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RouteNames.deviceManage,
             builder: (_, state) => const DeviceManagePage(),
+          ),
+          GoRoute(
+            path: RouteNames.postDetail,
+            builder: (_, state) {
+              final id = state.uri.queryParameters['id'] ?? '';
+              return PostDetailPage(postId: id);
+            },
+          ),
+          GoRoute(
+            path: RouteNames.userProfile,
+            builder: (_, state) {
+              final id = state.uri.queryParameters['id'] ?? '';
+              return UserProfilePage(userId: id);
+            },
+          ),
+          GoRoute(
+            path: RouteNames.publish,
+            builder: (_, state) => const PublishPage(),
+          ),
+          GoRoute(
+            path: RouteNames.favorites,
+            builder: (_, state) => const FavoritesPage(),
           ),
         ],
       ),
@@ -90,6 +121,7 @@ class _AppShell extends StatelessWidget {
           ),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
             _navItem(Icons.home_rounded, Icons.home_outlined, '首页', RouteNames.home, loc, context),
+            _navItem(Icons.explore_rounded, Icons.explore_outlined, '展示区', RouteNames.showcase, loc, context),
             _navItem(Icons.storage_rounded, Icons.storage_outlined, '存储库', RouteNames.repository, loc, context),
             _navItem(Icons.person_rounded, Icons.person_outlined, '我的', RouteNames.profile, loc, context),
           ]),

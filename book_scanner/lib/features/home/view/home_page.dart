@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_enums.dart';
-import '../../../../core/constants/hardware_config.dart';
 import '../../../../core/providers/device_provider.dart';
 import '../../../../shared/widgets/device_status_bar.dart';
 import '../../../../data/local_db/database_helper.dart';
 import '../../../../data/models/braille_record.dart';
 import '../providers/home_provider.dart';
-import '../widgets/braille_board_view.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -84,7 +82,9 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
       }
 
-      if (next.ocrText != null && next.ocrText != prev?.ocrText) {
+      if (next.ocrText != null &&
+          next.ocrSeq != 0 &&
+          next.ocrSeq != prev?.ocrSeq) {
         notifier.onOcrResult(next.ocrText!, next.ocrTotalChars);
       }
 
@@ -134,7 +134,9 @@ class _HomePageState extends ConsumerState<HomePage> {
               ]),
             ),
           ),
-          if (isWorking || deviceState.currentStep != PrintStep.idle) ...[
+          if (isWorking ||
+              (deviceState.currentStep != PrintStep.idle &&
+                  deviceState.currentStep != PrintStep.stopped)) ...[
             _brailleBoardCard(theme, homeState),
             _logPanel(theme, homeState, isWorking),
           ],
@@ -164,11 +166,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             style: TextStyle(color: nearEnd ? Colors.orangeAccent : Colors.greenAccent.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'monospace'),
           ),
         ]),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 200,
-          child: Center(child: BrailleBoardView(litDots: state.litDots, showBorder: false)),
-        ),
         if (nearEnd) ...[
           const SizedBox(height: 8),
           Container(
@@ -442,7 +439,10 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (isWorking) ...[
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: () => ref.read(deviceProvider.notifier).emergencyStop(),
+          onPressed: () {
+            ref.read(homeProvider.notifier).clearLogs();
+            ref.read(deviceProvider.notifier).emergencyStop();
+          },
           icon: const Icon(Icons.stop_rounded, size: 18, color: Colors.red),
           label: const Text('紧急停止', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
           style: OutlinedButton.styleFrom(
