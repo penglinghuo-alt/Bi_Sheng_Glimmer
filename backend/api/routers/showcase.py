@@ -1,4 +1,5 @@
 import uuid
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -172,7 +173,7 @@ def delete_post(post_id: str, current_user: User = Depends(get_current_user), db
     return {"success": True, "message": "帖子已删除"}
 
 
-@router.get("/posts/me/unpublished", response_model=list[UnpublishedRecordResponse], summary="未发布的存储库记录")
+@router.get("/posts/me/unpublished", response_model=List[UnpublishedRecordResponse], summary="未发布的存储库记录")
 def list_unpublished_records(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -287,7 +288,7 @@ def list_favorites(
 
 # ─── 评论 ─────────────────────────────────────────────
 
-@router.get("/posts/{post_id}/comments", response_model=list[ShowcaseCommentResponse], summary="评论列表")
+@router.get("/posts/{post_id}/comments", response_model=List[ShowcaseCommentResponse], summary="评论列表")
 def list_comments(
     post_id: str,
     current_user: User = Depends(get_current_user),
