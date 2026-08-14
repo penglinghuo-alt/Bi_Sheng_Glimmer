@@ -59,6 +59,10 @@
 │  │ /api/auth│ │/api/records│ │/api/device│ │/api/  │  │
 │  │          │ │          │ │          │ │  logs  │  │
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬───┘  │
+│       │  ┌──────────────────────┴─────────┐  │      │
+│       │  │  /api/showcase (展示区)          │  │      │
+│       │  │  帖子/点赞/收藏/评论/用户主页     │  │      │
+│       │  └──────────────┬──────────────────┘  │      │
 │       └────────────┴────────────┴────────────┘      │
 │                         │                           │
 │                    SQLAlchemy                        │
@@ -85,6 +89,11 @@
 | 盲文记录 CRUD | GET/POST/PUT/DELETE `/api/records/*` | 是 |
 | 设备控制 | GET/POST `/api/device/*` | 是 |
 | 日志上传 | GET/POST `/api/logs/*` | 是 |
+| 展示区帖子 | GET/POST/DELETE `/api/showcase/posts*` | 是 |
+| 展示区点赞/收藏 | POST/DELETE `/api/showcase/posts/{id}/like` 等 | 是 |
+| 展示区评论 | GET/POST `/api/showcase/posts/{id}/comments` | 是 |
+| 展示区用户主页 | GET `/api/showcase/users/{id}*` | 是 |
+| 我的收藏 | GET `/api/showcase/favorites` | 是 |
 
 ### 认证流程
 
@@ -187,6 +196,42 @@ idle → turningPage → capturing → recognizing → converting → printing �
 | device_id | VARCHAR(64) | 设备标识 |
 | log_content | TEXT | 日志内容 |
 
+**showcase_posts** — 展示区帖子
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | VARCHAR(64) PK | UUID |
+| user_id | VARCHAR(64) FK | 发布者 |
+| record_id | VARCHAR(64) FK | 来源记录 (唯一约束:同一记录仅可被同一用户发布一次) |
+| description | TEXT | 描述 (最长 500 字) |
+| created_at | DATETIME | 发布时间 |
+
+**showcase_post_likes** — 点赞 (唯一约束 post_id + user_id)
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT PK | 自增 |
+| post_id | VARCHAR(64) FK | 帖子 |
+| user_id | VARCHAR(64) FK | 用户 |
+
+**showcase_post_favorites** — 收藏 (唯一约束 post_id + user_id)
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT PK | 自增 |
+| post_id | VARCHAR(64) FK | 帖子 |
+| user_id | VARCHAR(64) FK | 用户 |
+
+**showcase_post_comments** — 评论
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT PK | 自增 |
+| post_id | VARCHAR(64) FK | 帖子 |
+| user_id | VARCHAR(64) FK | 评论者 |
+| content | VARCHAR(500) | 评论内容 (最长 200 字) |
+| created_at | DATETIME | 评论时间 |
+
 ### 数据库切换
 
 默认使用 SQLite（零配置）。配置 `.env` 中 `DB_HOST` 和 `DB_USER` 后自动切换 MySQL：
@@ -205,7 +250,7 @@ DB_NAME=bisheng_glimmer
 ├── backend/
 │   ├── main.py                  # FastAPI 入口 + 生命周期 + 路由注册
 │   ├── database.py              # SQLAlchemy 引擎 + Session
-│   ├── models.py                # ORM 模型 (User, BrailleRecord, DeviceLog)
+│   ├── models.py                # ORM 模型 (User, BrailleRecord, DeviceLog, 展示区 4 表)
 │   ├── schemas.py               # Pydantic 请求/响应模型
 │   ├── auth_utils.py            # JWT + 密码哈希 (sha256_crypt/bcrypt)
 │   ├── requirements.txt         # Python 依赖
@@ -215,7 +260,8 @@ DB_NAME=bisheng_glimmer
 │       ├── auth.py              # 登录/注册/用户信息/头像
 │       ├── records.py           # 盲文记录 CRUD
 │       ├── device.py            # 设备状态机控制
-│       └── logs.py              # 设备日志
+│       ├── logs.py              # 设备日志
+│       └── showcase.py          # 展示区 (帖子/点赞/收藏/评论/用户主页)
 │
 ├── book_scanner/                # Flutter 前端
 │   ├── pubspec.yaml
@@ -235,7 +281,8 @@ DB_NAME=bisheng_glimmer
 │           ├── auth/            # 登录/注册
 │           ├── home/            # 首页 + 打印进度
 │           ├── profile/         # 个人中心 + 头像
-│           └── repository/      # 记录列表 + 预览
+│           ├── repository/      # 记录列表 + 预览
+│           └── showcase/        # 展示区 (瀑布流/详情/用户主页/发布/收藏)
 │
 ├── server.py                    # 代理服务器 (反代 + SPA fallback)
 ├── serve.py                     # 纯静态文件服务器
@@ -269,7 +316,7 @@ flutter run -d android   # Android
 
 ### 宝塔面板 (生产)
 
-后端以 Python 项目管理器部署，启动命令：
+后端以 Python 项目管理器部署，代码目录 `C:\wwwroot\backend`，启动命令：
 
 ```
 uvicorn main:app --host 0.0.0.0 --port 8001
@@ -294,6 +341,11 @@ CREATE DATABASE bisheng_glimmer CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 | `/profile` | 个人中心 | 是 |
 | `/preview?id=xxx` | 记录预览 | 是 |
 | `/device-manage` | 设备管理 | 是 |
+| `/showcase` | 展示区 (瀑布流) | 是 |
+| `/post-detail?id=xxx` | 帖子详情 | 是 |
+| `/user-profile?id=xxx` | 用户主页 | 是 |
+| `/publish` | 发布帖子 | 是 |
+| `/favorites` | 我的收藏 | 是 |
 
 ### 后端 API
 
@@ -318,3 +370,67 @@ CREATE DATABASE bisheng_glimmer CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 | POST | `/api/device/paper-ready` | 换纸确认 |
 | GET | `/api/logs` | 日志列表 |
 | POST | `/api/logs/upload` | 上传日志 |
+| GET | `/api/showcase/posts` | 展示区帖子列表 (分页) |
+| POST | `/api/showcase/posts` | 发布帖子 (存储库记录 / 本地文件) |
+| GET | `/api/showcase/posts/{id}` | 帖子详情 |
+| DELETE | `/api/showcase/posts/{id}` | 删除帖子 |
+| GET | `/api/showcase/posts/me/unpublished` | 未发布的存储库记录 |
+| POST | `/api/showcase/posts/{id}/like` | 点赞 |
+| DELETE | `/api/showcase/posts/{id}/like` | 取消点赞 |
+| POST | `/api/showcase/posts/{id}/favorite` | 收藏 |
+| DELETE | `/api/showcase/posts/{id}/favorite` | 取消收藏 |
+| GET | `/api/showcase/favorites` | 我的收藏列表 |
+| GET | `/api/showcase/posts/{id}/comments` | 评论列表 |
+| POST | `/api/showcase/posts/{id}/comments` | 发表评论 |
+| DELETE | `/api/showcase/comments/{id}` | 删除评论 |
+| GET | `/api/showcase/users/{id}` | 用户详情 |
+| GET | `/api/showcase/users/{id}/posts` | 用户发布的帖子列表 |
+
+## 部署与常见问题
+
+### 后端部署到腾讯云 (宝塔面板)
+
+线上环境:宝塔反向代理 `http://119.91.119.89:9000` → FastAPI `:8001`,后端代码目录 `C:\wwwroot\backend`。
+
+**升级/同步后端代码:**
+
+1. 在服务器 `C:\wwwroot\backend` 目录拉取最新代码:
+
+   ```powershell
+   cd C:\wwwroot\backend
+   git pull origin demo-mock-flow
+   ```
+
+   服务器无 git 仓库时,手动上传变更文件即可。
+
+2. 在宝塔面板 → Python 项目管理器 → 毕昇微光 → 点击「重启」。
+
+3. 验证:`http://119.91.119.89:9000/api/health` 应返回 `healthy`。
+
+**说明:**
+
+- 新增数据表由 `init_db()`(`Base.metadata.create_all`)在启动时自动创建,无需手动建表
+- 新表仅会 `CREATE TABLE IF NOT EXISTS`,不影响已有数据
+- MySQL 连接需 `?charset=utf8mb4`,否则 bio 等中文会乱码
+
+### 前端 `flutter pub get` 失败排查
+
+若 `flutter pub get` 报 `could not find package xxx at https://mirrors.aliyun.com/dart-pub/`:
+
+- 这是**阿里云 dart-pub 镜像失效**导致,与 pubspec 版本写法无关
+- 换成腾讯云镜像:
+
+  ```powershell
+  $env:PUB_HOSTED_URL="https://mirrors.cloud.tencent.com/dart-pub"
+  $env:FLUTTER_STORAGE_BASE_URL="https://mirrors.cloud.tencent.com/flutter"
+  flutter pub get
+  ```
+
+- 备选清华镜像:`$env:PUB_HOSTED_URL="https://mirrors.tuna.tsinghua.edu.cn/dart-pub"`
+- 注意:项目使用手写 `StateNotifier` + `StateNotifierProvider`,不需要 `riverpod_generator` / `build_runner` / `custom_lint` 等代码生成依赖,请勿重新加回
+
+### 前端请求 404 / 401 排查
+
+- **404 on `/api/showcase/posts`**:线上后端未同步展示区代码,按上文"后端部署"同步并重启
+- **404 on 其它 `/api/*`**:路由未注册或后端版本过旧
+- **401 on `/api/auth/login`**:账号或密码错误(登录接口无 token 依赖,401 仅来自凭据校验失败)
