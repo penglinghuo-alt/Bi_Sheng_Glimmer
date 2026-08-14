@@ -40,7 +40,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                       const SizedBox(height: 12),
                       Text('暂无收藏', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.4))),
                       const SizedBox(height: 4),
-                      Text('去展示区逛逛吧', style: theme.textTheme.bodySmall),
+                      Text('去首页逛逛吧', style: theme.textTheme.bodySmall),
                     ]),
                   )
                 : RefreshIndicator(

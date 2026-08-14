@@ -60,7 +60,7 @@
 │  │          │ │          │ │          │ │  logs  │  │
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬───┘  │
 │       │  ┌──────────────────────┴─────────┐  │      │
-│       │  │  /api/showcase (展示区)          │  │      │
+│       │  │  /api/showcase (首页)          │  │      │
 │       │  │  帖子/点赞/收藏/评论/用户主页     │  │      │
 │       │  └──────────────┬──────────────────┘  │      │
 │       └────────────┴────────────┴────────────┘      │
@@ -89,10 +89,10 @@
 | 盲文记录 CRUD | GET/POST/PUT/DELETE `/api/records/*` | 是 |
 | 设备控制 | GET/POST `/api/device/*` | 是 |
 | 日志上传 | GET/POST `/api/logs/*` | 是 |
-| 展示区帖子 | GET/POST/DELETE `/api/showcase/posts*` | 是 |
-| 展示区点赞/收藏 | POST/DELETE `/api/showcase/posts/{id}/like` 等 | 是 |
-| 展示区评论 | GET/POST `/api/showcase/posts/{id}/comments` | 是 |
-| 展示区用户主页 | GET `/api/showcase/users/{id}*` | 是 |
+| 首页帖子 | GET/POST/DELETE `/api/showcase/posts*` | 是 |
+| 首页点赞/收藏 | POST/DELETE `/api/showcase/posts/{id}/like` 等 | 是 |
+| 首页评论 | GET/POST `/api/showcase/posts/{id}/comments` | 是 |
+| 首页用户主页 | GET `/api/showcase/users/{id}*` | 是 |
 | 我的收藏 | GET `/api/showcase/favorites` | 是 |
 
 ### 认证流程
@@ -196,7 +196,7 @@ idle → turningPage → capturing → recognizing → converting → printing �
 | device_id | VARCHAR(64) | 设备标识 |
 | log_content | TEXT | 日志内容 |
 
-**showcase_posts** — 展示区帖子
+**showcase_posts** — 首页帖子
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -250,7 +250,7 @@ DB_NAME=bisheng_glimmer
 ├── backend/
 │   ├── main.py                  # FastAPI 入口 + 生命周期 + 路由注册
 │   ├── database.py              # SQLAlchemy 引擎 + Session
-│   ├── models.py                # ORM 模型 (User, BrailleRecord, DeviceLog, 展示区 4 表)
+│   ├── models.py                # ORM 模型 (User, BrailleRecord, DeviceLog, 首页 4 表)
 │   ├── schemas.py               # Pydantic 请求/响应模型
 │   ├── auth_utils.py            # JWT + 密码哈希 (sha256_crypt/bcrypt)
 │   ├── requirements.txt         # Python 依赖
@@ -261,7 +261,7 @@ DB_NAME=bisheng_glimmer
 │       ├── records.py           # 盲文记录 CRUD
 │       ├── device.py            # 设备状态机控制
 │       ├── logs.py              # 设备日志
-│       └── showcase.py          # 展示区 (帖子/点赞/收藏/评论/用户主页)
+│       └── showcase.py          # 首页 (帖子/点赞/收藏/评论/用户主页)
 │
 ├── book_scanner/                # Flutter 前端
 │   ├── pubspec.yaml
@@ -279,10 +279,10 @@ DB_NAME=bisheng_glimmer
 │       │   └── services/        # ApiClient (Dio)
 │       └── features/
 │           ├── auth/            # 登录/注册
-│           ├── home/            # 首页 + 打印进度
+│           ├── home/            # 打印 (扫描打印进度)
 │           ├── profile/         # 个人中心 + 头像
 │           ├── repository/      # 记录列表 + 预览
-│           └── showcase/        # 展示区 (瀑布流/详情/用户主页/发布/收藏)
+│           └── showcase/        # 首页 (瀑布流/详情/用户主页/发布/收藏)
 │
 ├── server.py                    # 代理服务器 (反代 + SPA fallback)
 ├── serve.py                     # 纯静态文件服务器
@@ -336,12 +336,12 @@ CREATE DATABASE bisheng_glimmer CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 |------|------|------|
 | `/login` | 登录 | 否 |
 | `/register` | 注册 | 否 |
-| `/home` | 首页 (扫描打印) | 是 |
+| `/home` | 打印 (扫描打印) | 是 |
 | `/repository` | 存储库 | 是 |
 | `/profile` | 个人中心 | 是 |
 | `/preview?id=xxx` | 记录预览 | 是 |
 | `/device-manage` | 设备管理 | 是 |
-| `/showcase` | 展示区 (瀑布流) | 是 |
+| `/showcase` | 首页 (瀑布流) | 是 |
 | `/post-detail?id=xxx` | 帖子详情 | 是 |
 | `/user-profile?id=xxx` | 用户主页 | 是 |
 | `/publish` | 发布帖子 | 是 |
@@ -370,7 +370,7 @@ CREATE DATABASE bisheng_glimmer CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 | POST | `/api/device/paper-ready` | 换纸确认 |
 | GET | `/api/logs` | 日志列表 |
 | POST | `/api/logs/upload` | 上传日志 |
-| GET | `/api/showcase/posts` | 展示区帖子列表 (分页) |
+| GET | `/api/showcase/posts` | 首页帖子列表 (分页) |
 | POST | `/api/showcase/posts` | 发布帖子 (存储库记录 / 本地文件) |
 | GET | `/api/showcase/posts/{id}` | 帖子详情 |
 | DELETE | `/api/showcase/posts/{id}` | 删除帖子 |
@@ -431,6 +431,6 @@ CREATE DATABASE bisheng_glimmer CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 
 ### 前端请求 404 / 401 排查
 
-- **404 on `/api/showcase/posts`**:线上后端未同步展示区代码,按上文"后端部署"同步并重启
+- **404 on `/api/showcase/posts`**:线上后端未同步首页代码,按上文"后端部署"同步并重启
 - **404 on 其它 `/api/*`**:路由未注册或后端版本过旧
 - **401 on `/api/auth/login`**:账号或密码错误(登录接口无 token 依赖,401 仅来自凭据校验失败)

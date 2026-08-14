@@ -192,7 +192,7 @@ class ApiClient {
     return res.data;
   }
 
-  // ─── Showcase（展示区）────────────────────────────
+  // ─── Showcase（首页）────────────────────────────
 
   Future<Map<String, dynamic>> getShowcasePosts({int page = 1, int pageSize = 20}) async {
     final res = await _dio.get('/api/showcase/posts', queryParameters: {

@@ -101,7 +101,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('毕昇微光'),
+        title: const Text('打印'),
         centerTitle: true,
         actions: [
           Padding(

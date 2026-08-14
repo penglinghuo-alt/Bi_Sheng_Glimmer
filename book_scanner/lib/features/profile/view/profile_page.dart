@@ -33,7 +33,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           child: Column(children: [
             _profileHeader(theme, user),
             const SizedBox(height: 28),
-            _sectionTitle(theme, '展示区'),
+            _sectionTitle(theme, '首页'),
             const SizedBox(height: 10),
             _menuTile(theme, Icons.bookmark_rounded, '我的收藏', '查看收藏的帖子', () => context.go('/favorites')),
             const SizedBox(height: 20),

@@ -12,7 +12,7 @@ from schemas import (
 )
 from auth_utils import get_current_user
 
-router = APIRouter(prefix="/api/showcase", tags=["展示区"])
+router = APIRouter(prefix="/api/showcase", tags=["首页"])
 
 
 def _build_author(user: User) -> ShowcaseAuthor:
@@ -77,7 +77,7 @@ def _query_visible_posts(db: Session, user_id: str = None):
 
 # ─── 帖子 ─────────────────────────────────────────────
 
-@router.get("/posts", response_model=ShowcasePostListResponse, summary="展示区帖子列表")
+@router.get("/posts", response_model=ShowcasePostListResponse, summary="首页帖子列表")
 def list_posts(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),

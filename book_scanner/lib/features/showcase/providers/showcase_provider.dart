@@ -48,7 +48,7 @@ class ShowcaseNotifier extends StateNotifier<ShowcaseState> {
       final list = ShowcasePostList.fromJson(data);
       state = state.copyWith(posts: list.posts, total: list.total, loading: false);
     } catch (e) {
-      state = state.copyWith(loading: false, error: '展示区加载失败，请稍后重试');
+      state = state.copyWith(loading: false, error: '首页加载失败，请稍后重试');
     }
   }
 

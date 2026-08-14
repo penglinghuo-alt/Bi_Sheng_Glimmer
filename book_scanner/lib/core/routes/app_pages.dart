@@ -120,8 +120,8 @@ class _AppShell extends StatelessWidget {
             boxShadow: [BoxShadow(color: theme.colorScheme.shadow.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, -4))],
           ),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-            _navItem(Icons.home_rounded, Icons.home_outlined, '首页', RouteNames.home, loc, context),
-            _navItem(Icons.explore_rounded, Icons.explore_outlined, '展示区', RouteNames.showcase, loc, context),
+            _navItem(Icons.home_rounded, Icons.home_outlined, '首页', RouteNames.showcase, loc, context),
+            _navItem(Icons.print_rounded, Icons.print_outlined, '打印', RouteNames.home, loc, context),
             _navItem(Icons.storage_rounded, Icons.storage_outlined, '存储库', RouteNames.repository, loc, context),
             _navItem(Icons.person_rounded, Icons.person_outlined, '我的', RouteNames.profile, loc, context),
           ]),

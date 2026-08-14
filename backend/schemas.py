@@ -105,7 +105,7 @@ class LogUploadResponse(BaseModel):
     message: str
 
 
-# ─── Showcase（展示区）─────────────────────────────────
+# ─── Showcase（首页）─────────────────────────────────
 
 class ShowcasePostCreate(BaseModel):
     record_id: Optional[str] = None

@@ -43,7 +43,7 @@ class _ShowcasePageState extends ConsumerState<ShowcasePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('展示区'),
+        title: const Text('首页'),
         centerTitle: false,
         actions: [
           IconButton(

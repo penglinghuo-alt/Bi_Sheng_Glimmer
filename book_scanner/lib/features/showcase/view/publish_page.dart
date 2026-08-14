@@ -46,7 +46,7 @@ class _PublishPageState extends ConsumerState<PublishPage> {
     final state = ref.watch(publishProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('发布到展示区'), centerTitle: false),
+      appBar: AppBar(title: const Text('发布'), centerTitle: false),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
