@@ -97,6 +97,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           prev?.currentStep != PrintStep.completed) {
         notifier.onPrintComplete();
       }
+
+      if (next.currentStep == PrintStep.stopped &&
+          prev?.currentStep != PrintStep.stopped) {
+        notifier.onPrintComplete();
+      }
     });
 
     return Scaffold(
