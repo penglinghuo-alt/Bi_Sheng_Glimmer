@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/constants/route_names.dart';
 import '../../../../data/models/braille_record.dart';
 import '../providers/repo_provider.dart';
 
@@ -100,6 +101,11 @@ class RepoListPage extends ConsumerWidget {
                 tooltip: '删除记录',
                 icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
                 onPressed: () => _confirmDelete(context, ref, record),
+              ),
+              IconButton(
+                tooltip: '发布到首页',
+                icon: const Icon(Icons.ios_share_rounded, color: AppColors.primary),
+                onPressed: () => context.push('${RouteNames.publish}?id=${record.id}'),
               ),
               PopupMenuButton<String>(
                 onSelected: (action) {

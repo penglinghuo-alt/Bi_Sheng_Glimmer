@@ -9,7 +9,9 @@ import '../providers/publish_provider.dart';
 import '../providers/showcase_provider.dart';
 
 class PublishPage extends ConsumerStatefulWidget {
-  const PublishPage({super.key});
+  final String? initialRecordId;
+
+  const PublishPage({super.key, this.initialRecordId});
 
   @override
   ConsumerState<PublishPage> createState() => _PublishPageState();
@@ -28,8 +30,16 @@ class _PublishPageState extends ConsumerState<PublishPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(publishProvider.notifier).loadUnpublished();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(publishProvider.notifier).loadUnpublished();
+      final targetId = widget.initialRecordId;
+      if (targetId != null && targetId.isNotEmpty) {
+        final records = ref.read(publishProvider).records;
+        final match = records.where((r) => r.id == targetId).toList();
+        if (match.isNotEmpty && mounted) {
+          setState(() => _selectedRecord = match.first);
+        }
+      }
     });
   }
 

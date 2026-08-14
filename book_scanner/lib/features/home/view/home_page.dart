@@ -136,7 +136,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           if (isWorking ||
               (deviceState.currentStep != PrintStep.idle &&
-                  deviceState.currentStep != PrintStep.stopped)) ...[
+                  deviceState.currentStep != PrintStep.stopped &&
+                  deviceState.currentStep != PrintStep.completed)) ...[
             _brailleBoardCard(theme, homeState),
             _logPanel(theme, homeState, isWorking),
           ],

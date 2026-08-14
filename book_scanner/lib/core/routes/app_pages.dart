@@ -89,7 +89,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.publish,
-            builder: (_, state) => const PublishPage(),
+            builder: (_, state) {
+              final id = state.uri.queryParameters['id'] ?? '';
+              return PublishPage(initialRecordId: id);
+            },
           ),
           GoRoute(
             path: RouteNames.favorites,
