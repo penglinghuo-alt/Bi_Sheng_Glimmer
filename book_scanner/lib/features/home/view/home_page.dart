@@ -106,7 +106,9 @@ class _HomePageState extends ConsumerState<HomePage> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: DeviceStatusBar(),
+            child: deviceState.currentStep == PrintStep.completed
+                ? const SizedBox.shrink()
+                : DeviceStatusBar(),
           ),
         ],
       ),
