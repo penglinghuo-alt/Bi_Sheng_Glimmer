@@ -194,10 +194,11 @@ class ApiClient {
 
   // ─── Showcase（首页）────────────────────────────
 
-  Future<Map<String, dynamic>> getShowcasePosts({int page = 1, int pageSize = 20}) async {
+  Future<Map<String, dynamic>> getShowcasePosts({int page = 1, int pageSize = 20, String? keyword}) async {
     final res = await _dio.get('/api/showcase/posts', queryParameters: {
       'page': page,
       'page_size': pageSize,
+      if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
     });
     return res.data;
   }

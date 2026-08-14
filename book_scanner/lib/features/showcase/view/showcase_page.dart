@@ -16,6 +16,7 @@ class ShowcasePage extends ConsumerStatefulWidget {
 
 class _ShowcasePageState extends ConsumerState<ShowcasePage> {
   final _scrollController = ScrollController();
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -33,6 +34,7 @@ class _ShowcasePageState extends ConsumerState<ShowcasePage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -56,43 +58,108 @@ class _ShowcasePageState extends ConsumerState<ShowcasePage> {
       body: SafeArea(
         child: state.loading && state.posts.isEmpty
             ? const Center(child: CircularProgressIndicator())
-            : state.posts.isEmpty
-                ? _emptyState(theme)
-                : RefreshIndicator(
-                    onRefresh: () => ref.read(showcaseProvider.notifier).loadFirstPage(),
-                    child: CustomScrollView(
-                      controller: _scrollController,
-                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                      slivers: [
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                          sliver: SliverList.builder(
-                            itemCount: state.posts.length,
-                            itemBuilder: (_, i) => _postCard(theme, state.posts[i], context),
-                          ),
-                        ),
-                        if (state.loadingMore)
-                          const SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))),
-                            ),
-                          ),
-                      ],
+            : RefreshIndicator(
+                onRefresh: () => ref.read(showcaseProvider.notifier).loadFirstPage(),
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                      sliver: SliverToBoxAdapter(child: _searchBar(theme)),
                     ),
-                  ),
+                    if (state.posts.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _emptyState(theme),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                        sliver: SliverToBoxAdapter(
+                          child: _masonryGrid(theme, state.posts, context),
+                        ),
+                      ),
+                    if (state.loadingMore)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
       ),
     );
   }
 
+  Widget _searchBar(ThemeData theme) {
+    return TextField(
+      controller: _searchController,
+      textInputAction: TextInputAction.search,
+      onChanged: (_) => setState(() {}),
+      onSubmitted: (v) => ref.read(showcaseProvider.notifier).search(v),
+      decoration: InputDecoration(
+        hintText: '搜索帖子标题或内容',
+        prefixIcon: const Icon(Icons.search_rounded),
+        suffixIcon: _searchController.text.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.clear_rounded),
+                onPressed: () {
+                  _searchController.clear();
+                  ref.read(showcaseProvider.notifier).search('');
+                },
+              ),
+        filled: true,
+        fillColor: theme.colorScheme.surfaceContainerHighest,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _masonryGrid(ThemeData theme, List<ShowcasePost> posts, BuildContext context) {
+    final left = <ShowcasePost>[];
+    final right = <ShowcasePost>[];
+    for (var i = 0; i < posts.length; i++) {
+      if (i.isEven) {
+        left.add(posts[i]);
+      } else {
+        right.add(posts[i]);
+      }
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(children: [
+            for (final post in left) _postCard(theme, post, context),
+          ]),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(children: [
+            for (final post in right) _postCard(theme, post, context),
+          ]),
+        ),
+      ],
+    );
+  }
+
   Widget _emptyState(ThemeData theme) {
+    final searching = _searchController.text.trim().isNotEmpty;
     return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.explore_outlined, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
         const SizedBox(height: 12),
-        Text('还没有内容，快来发布第一条吧', style: theme.textTheme.bodyMedium),
+        Text(searching ? '没有找到相关帖子' : '还没有内容，快来发布第一条吧', style: theme.textTheme.bodyMedium),
         const SizedBox(height: 4),
-        Text('点击右上角按钮发布你的记录', style: theme.textTheme.bodySmall),
+        Text(searching ? '换个关键词试试' : '点击右上角按钮发布你的记录', style: theme.textTheme.bodySmall),
       ]),
     );
   }
@@ -108,7 +175,7 @@ class _ShowcasePageState extends ConsumerState<ShowcasePage> {
         onTap: () => context.push('${RouteNames.postDetail}?id=${post.id}'),
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(20),
@@ -122,14 +189,14 @@ class _ShowcasePageState extends ConsumerState<ShowcasePage> {
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             _authorRow(theme, post.author),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(post.displayTitle,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(post.excerpt,
-                maxLines: 3,
+                maxLines: 6,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyLarge?.copyWith(height: 1.5)),
             const SizedBox(height: 12),
@@ -137,7 +204,9 @@ class _ShowcasePageState extends ConsumerState<ShowcasePage> {
               _badge(theme, Icons.description_outlined, post.sourceType),
               const SizedBox(width: 8),
               _badge(theme, Icons.pages_outlined, '${post.pageCount} 页'),
-              const Spacer(),
+            ]),
+            const SizedBox(height: 10),
+            Row(children: [
               Icon(Icons.favorite_border_rounded, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
               const SizedBox(width: 4),
               Text('${post.likeCount}', style: theme.textTheme.bodySmall),

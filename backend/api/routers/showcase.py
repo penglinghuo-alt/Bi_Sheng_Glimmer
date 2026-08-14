@@ -2,7 +2,7 @@ import uuid
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from database import get_db
 from models import User, BrailleRecord, ShowcasePost, PostLike, PostFavorite, PostComment
@@ -82,10 +82,21 @@ def _query_visible_posts(db: Session, user_id: str = None):
 def list_posts(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    keyword: str = Query(default=None, max_length=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     base = _query_visible_posts(db)
+    if keyword and keyword.strip():
+        kw = keyword.strip()
+        like = f"%{kw}%"
+        base = base.filter(
+            or_(
+                BrailleRecord.title.like(like),
+                BrailleRecord.text_content.like(like),
+                ShowcasePost.description.like(like),
+            )
+        )
     total = base.count()
     posts = (
         base.order_by(ShowcasePost.created_at.desc())

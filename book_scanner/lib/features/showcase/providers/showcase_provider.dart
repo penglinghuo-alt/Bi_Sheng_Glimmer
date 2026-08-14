@@ -37,6 +37,7 @@ class ShowcaseState {
 class ShowcaseNotifier extends StateNotifier<ShowcaseState> {
   final ApiClient _api = ApiClient();
   int _page = 1;
+  String _keyword = '';
 
   ShowcaseNotifier() : super(const ShowcaseState());
 
@@ -44,7 +45,7 @@ class ShowcaseNotifier extends StateNotifier<ShowcaseState> {
     _page = 1;
     state = state.copyWith(loading: true, error: null);
     try {
-      final data = await _api.getShowcasePosts(page: _page);
+      final data = await _api.getShowcasePosts(page: _page, keyword: _keyword);
       final list = ShowcasePostList.fromJson(data);
       state = state.copyWith(posts: list.posts, total: list.total, loading: false);
     } catch (e) {
@@ -52,12 +53,18 @@ class ShowcaseNotifier extends StateNotifier<ShowcaseState> {
     }
   }
 
+  Future<void> search(String keyword) async {
+    if (_keyword == keyword.trim()) return;
+    _keyword = keyword.trim();
+    await loadFirstPage();
+  }
+
   Future<void> loadMore() async {
     if (state.loading || state.loadingMore) return;
     if (state.posts.length >= state.total) return;
     state = state.copyWith(loadingMore: true);
     try {
-      final data = await _api.getShowcasePosts(page: _page + 1);
+      final data = await _api.getShowcasePosts(page: _page + 1, keyword: _keyword);
       final list = ShowcasePostList.fromJson(data);
       _page += 1;
       state = state.copyWith(
