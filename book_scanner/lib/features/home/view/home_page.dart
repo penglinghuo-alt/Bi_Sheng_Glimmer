@@ -111,9 +111,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: deviceState.currentStep == PrintStep.completed
-                ? const SizedBox.shrink()
-                : DeviceStatusBar(),
+            child: DeviceStatusBar(),
           ),
         ],
       ),
@@ -132,7 +130,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ],
                 const SizedBox(height: 24),
                 if (isBusy) _busyIndicator(theme, deviceState),
-                if (isConnected) ...[
+                if (isConnected && deviceState.currentStep != PrintStep.completed) ...[
                   const SizedBox(height: 12),
                   _deviceInfoCard(theme, deviceState),
                 ],
