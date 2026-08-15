@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.book_scanner"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

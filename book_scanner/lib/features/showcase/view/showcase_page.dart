@@ -200,10 +200,9 @@ class _ShowcasePageState extends ConsumerState<ShowcasePage> {
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyLarge?.copyWith(height: 1.5)),
             const SizedBox(height: 12),
-            Row(children: [
-              _badge(theme, Icons.description_outlined, post.sourceType),
-              const SizedBox(width: 8),
-              _badge(theme, Icons.pages_outlined, '${post.pageCount} 页'),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              Flexible(child: _badge(theme, Icons.description_outlined, post.sourceType)),
+              Flexible(child: _badge(theme, Icons.pages_outlined, '${post.pageCount} 页')),
             ]),
             const SizedBox(height: 10),
             Row(children: [
@@ -246,7 +245,12 @@ class _ShowcasePageState extends ConsumerState<ShowcasePage> {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 12, color: theme.colorScheme.primary),
         const SizedBox(width: 3),
-        Text(text, style: TextStyle(fontSize: 11, color: theme.colorScheme.primary)),
+        Flexible(
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, color: theme.colorScheme.primary)),
+        ),
       ]),
     );
   }

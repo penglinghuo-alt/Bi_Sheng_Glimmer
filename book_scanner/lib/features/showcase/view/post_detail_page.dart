@@ -282,7 +282,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
           child: Column(children: [
             Icon(icon, color: color),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
           ]),
         ),
       ),
