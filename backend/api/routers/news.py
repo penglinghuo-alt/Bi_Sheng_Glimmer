@@ -9,7 +9,7 @@ import os
 import re
 import time
 import urllib.request
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -83,7 +83,7 @@ def _load_fallback() -> List[dict]:
         return []
 
 
-def _get_items() -> tuple[str, List[dict]]:
+def _get_items() -> Tuple[str, List[dict]]:
     now = time.time()
     if now - _cache["ts"] < _CACHE_TTL and _cache["items"]:
         return "cache", _cache["items"]
