@@ -1,10 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
-
 class ApiClient {
-  static String get baseUrl => kIsWeb ? '' : 'http://119.91.119.89:9000';
+  static const String baseUrl = 'http://119.91.119.89:9000';
 
   static final ApiClient _instance = ApiClient._();
   factory ApiClient() => _instance;
