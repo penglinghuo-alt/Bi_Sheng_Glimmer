@@ -95,12 +95,12 @@ class _HomePageState extends ConsumerState<HomePage> {
 
       if (next.currentStep == PrintStep.completed &&
           prev?.currentStep != PrintStep.completed) {
-        notifier.onPrintComplete();
+        notifier.onPrintComplete(stopped: false);
       }
 
       if (next.currentStep == PrintStep.stopped &&
           prev?.currentStep != PrintStep.stopped) {
-        notifier.onPrintComplete();
+        notifier.onPrintComplete(stopped: true);
       }
     });
 
@@ -130,7 +130,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ],
                 const SizedBox(height: 24),
                 if (isBusy) _busyIndicator(theme, deviceState),
-                if (isConnected && deviceState.currentStep != PrintStep.completed) ...[
+                if (isConnected &&
+                    deviceState.currentStep != PrintStep.completed &&
+                    deviceState.currentStep != PrintStep.stopped) ...[
                   const SizedBox(height: 12),
                   _deviceInfoCard(theme, deviceState),
                 ],
@@ -530,7 +532,13 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _showPaperDialog() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(homeProvider.notifier).dismissPaperDialog();
+      final home = ref.read(homeProvider);
+      final stopped = home.currentStep == PrintStep.stopped;
+      final saved = home.selectedMode == PrintMode.scanAndPrint;
+      final title = stopped ? '打印已紧急停止' : '打印完成';
+      final message = stopped
+          ? (saved ? '任务已紧急停止\n打印内容已保存至存储库' : '任务已紧急停止')
+          : (saved ? '当前任务已完成\n已保存至存储库' : '当前任务已完成');
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -542,17 +550,17 @@ class _HomePageState extends ConsumerState<HomePage> {
               color: AppColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(Icons.note_add_rounded, color: AppColors.primary, size: 32),
+            child: Icon(stopped ? Icons.stop_circle_rounded : Icons.note_add_rounded, color: AppColors.primary, size: 32),
           ),
-          title: const Text('打印完成', style: TextStyle(fontWeight: FontWeight.w800), textAlign: TextAlign.center),
-          content: const Text('当前任务已完成\n已保存至存储库', textAlign: TextAlign.center, style: TextStyle(fontSize: 15)),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800), textAlign: TextAlign.center),
+          content: Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15)),
           actions: [
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  ref.read(homeProvider.notifier).confirmPaperReady();
+                  ref.read(homeProvider.notifier).confirmPrintDone();
                 },
                 icon: const Icon(Icons.check_rounded),
                 label: const Text('确定'),

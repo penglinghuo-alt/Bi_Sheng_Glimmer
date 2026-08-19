@@ -14,6 +14,7 @@ import '../../features/showcase/view/post_detail_page.dart';
 import '../../features/showcase/view/user_profile_page.dart';
 import '../../features/showcase/view/publish_page.dart';
 import '../../features/showcase/view/favorites_page.dart';
+import '../../features/news/view/news_page.dart';
 
 final authRedirectNotifier = ValueNotifier<bool>(false);
 
@@ -57,6 +58,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RouteNames.showcase,
             builder: (_, state) => const ShowcasePage(),
+          ),
+          GoRoute(
+            path: RouteNames.news,
+            builder: (_, state) => const NewsPage(),
           ),
           GoRoute(
             path: RouteNames.profile,
@@ -122,11 +127,12 @@ class _AppShell extends StatelessWidget {
             color: theme.colorScheme.surface,
             boxShadow: [BoxShadow(color: theme.colorScheme.shadow.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, -4))],
           ),
-          child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-            _navItem(Icons.home_rounded, Icons.home_outlined, '首页', RouteNames.showcase, loc, context),
-            _navItem(Icons.print_rounded, Icons.print_outlined, '打印', RouteNames.home, loc, context),
-            _navItem(Icons.storage_rounded, Icons.storage_outlined, '存储库', RouteNames.repository, loc, context),
-            _navItem(Icons.person_rounded, Icons.person_outlined, '我的', RouteNames.profile, loc, context),
+          child: Row(children: [
+            Expanded(child: _navItem(Icons.home_rounded, Icons.home_outlined, '首页', RouteNames.showcase, loc, context)),
+            Expanded(child: _navItem(Icons.article_rounded, Icons.article_outlined, '新闻', RouteNames.news, loc, context)),
+            Expanded(child: _navItem(Icons.print_rounded, Icons.print_outlined, '打印', RouteNames.home, loc, context)),
+            Expanded(child: _navItem(Icons.storage_rounded, Icons.storage_outlined, '存储库', RouteNames.repository, loc, context)),
+            Expanded(child: _navItem(Icons.person_rounded, Icons.person_outlined, '我的', RouteNames.profile, loc, context)),
           ]),
         ),
       ),
@@ -142,7 +148,7 @@ class _AppShell extends StatelessWidget {
         onTap: isActive ? null : () => context.go(route),
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Semantics(label: label, child: Icon(isActive ? filled : outlined, size: 26, color: color)),
             AnimatedContainer(

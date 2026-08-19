@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 from database import init_db, SessionLocal
 from models import User, BrailleRecord
 from auth_utils import hash_password, generate_id
-from api.routers import auth, records, device, logs, showcase
+from api.routers import auth, records, device, logs, showcase, news
 from api.routers.auth import avatar_router
 
 
@@ -118,6 +118,7 @@ app.include_router(records.router)
 app.include_router(device.router)
 app.include_router(logs.router)
 app.include_router(showcase.router)
+app.include_router(news.router)
 app.include_router(avatar_router)
 
 import os

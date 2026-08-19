@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class ApiClient {
-  static const String baseUrl = 'http://119.91.119.89:9000';
+  static String get baseUrl => kIsWeb ? '' : 'http://119.91.119.89:9000';
 
   static final ApiClient _instance = ApiClient._();
   factory ApiClient() => _instance;
@@ -174,6 +176,13 @@ class ApiClient {
 
   Future<Map<String, dynamic>> paperReady() async {
     final res = await _dio.post('/api/device/paper-ready');
+    return res.data;
+  }
+
+  // ─── News（AI 新闻摘要）─────────────────────────
+
+  Future<Map<String, dynamic>> fetchNews() async {
+    final res = await _dio.get('/api/news/latest');
     return res.data;
   }
 

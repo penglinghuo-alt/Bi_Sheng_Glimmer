@@ -177,37 +177,41 @@ class HomeNotifier extends StateNotifier<HomeState> {
     state = state.copyWith(logs: []);
   }
 
-  void onPrintComplete() {
+  void onPrintComplete({bool stopped = false}) {
     _jobCounter++;
-    final title = state.selectedMode == PrintMode.scanAndPrint
-        ? '扫描文档_第$_jobCounter份'
-        : '打印文件_第$_jobCounter份';
-    final record = BrailleRecord(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title,
-      sourceType: state.selectedMode == PrintMode.scanAndPrint ? '现场扫描' : '本地文件',
-      dotMatrixWidth: state.selectedMode == PrintMode.scanAndPrint ? 40 : 0,
-      dotMatrixHeight: state.selectedMode == PrintMode.scanAndPrint ? 30 : 0,
-      dotMatrixData: [],
-      createdAt: DateTime.now(),
-      pageCount: _pageCount > 0 ? _pageCount : 1,
-      textContent: _accumulatedOcr.isNotEmpty ? _accumulatedOcr : null,
+    if (state.selectedMode == PrintMode.scanAndPrint) {
+      final record = BrailleRecord(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: '扫描文档_第$_jobCounter份',
+        sourceType: '现场扫描',
+        dotMatrixWidth: 40,
+        dotMatrixHeight: 30,
+        dotMatrixData: [],
+        createdAt: DateTime.now(),
+        pageCount: _pageCount > 0 ? _pageCount : 1,
+        textContent: _accumulatedOcr.isNotEmpty ? _accumulatedOcr : null,
+      );
+      _lastSavedRecordId = record.id;
+      _saveRecord(record);
+    }
+    if (stopped) {
+      _log('打印已紧急停止，共 $_pageCount 页');
+    } else {
+      _log('打印任务完成，共 $_pageCount 页');
+    }
+    state = state.copyWith(
+      showPaperDialog: true,
+      currentStep: stopped ? PrintStep.stopped : PrintStep.completed,
+      progress: 1.0,
     );
-    _lastSavedRecordId = record.id;
-    _saveRecord(record);
-    state = state.copyWith(showPaperDialog: true, currentStep: PrintStep.completed, progress: 1.0);
-    _log('打印任务完成，共 $_pageCount 页');
   }
 
-  void showPaperDialog() {
-    state = state.copyWith(showPaperDialog: true, currentStep: PrintStep.completed, progress: 1.0);
+  /// 打印完成对话框点"确定"后调用，自动退出本次任务
+  void confirmPrintDone() {
+    _autoExit();
   }
 
-  void dismissPaperDialog() {
-    state = state.copyWith(showPaperDialog: false);
-  }
-
-  void confirmPaperReady() {
+  void _autoExit() {
     _accumulatedOcr = '';
     _lastSavedRecordId = null;
     _pageCount = 0;
