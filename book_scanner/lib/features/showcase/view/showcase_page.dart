@@ -201,8 +201,8 @@ class _ShowcasePageState extends ConsumerState<ShowcasePage> {
                 style: theme.textTheme.bodyLarge?.copyWith(height: 1.5)),
             const SizedBox(height: 12),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              Flexible(child: _badge(theme, Icons.description_outlined, post.sourceType)),
-              Flexible(child: _badge(theme, Icons.pages_outlined, '${post.pageCount} 页')),
+              _badge(theme, Icons.description_outlined, post.sourceType),
+              _badge(theme, Icons.pages_outlined, '${post.pageCount} 页'),
             ]),
             const SizedBox(height: 10),
             Row(children: [

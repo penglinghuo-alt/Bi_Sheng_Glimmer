@@ -5,7 +5,6 @@ import '../../../core/constants/hardware_config.dart';
 import '../../../core/utils/logger.dart';
 
 class WifiCommService implements IHardwareComm {
-  String? _ip;
   final StreamController<HardwareMessage> _statusController = StreamController<HardwareMessage>.broadcast();
 
   @override
@@ -13,7 +12,6 @@ class WifiCommService implements IHardwareComm {
 
   @override
   Future<bool> connect(String deviceIdOrIp) async {
-    _ip = deviceIdOrIp;
     Logger.info('[WiFi] Connecting to: $deviceIdOrIp');
     // TODO: Socket.connect(ip, port), 启动 listen 接收数据
     //   收到数据后解析 JSON → HardwareMessage → _statusController.add()
@@ -28,7 +26,6 @@ class WifiCommService implements IHardwareComm {
     Logger.info('[WiFi] Disconnecting');
     // TODO: socket.close()
     await Future.delayed(const Duration(milliseconds: 300));
-    _ip = null;
   }
 
   @override

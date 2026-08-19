@@ -365,6 +365,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       return;
     }
     final ok = await ref.read(postDetailProvider.notifier).addComment(text);
+    if (!mounted) return;
     if (ok) {
       _commentController.clear();
       FocusScope.of(context).unfocus();

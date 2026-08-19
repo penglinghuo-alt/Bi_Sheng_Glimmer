@@ -85,7 +85,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                 if (text != null && text.isNotEmpty) {
                   await ref.read(hardwareManagerProvider).sendText(text);
                 }
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: const Text('已发送文字数据到 MQTT Broker'), behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                   );

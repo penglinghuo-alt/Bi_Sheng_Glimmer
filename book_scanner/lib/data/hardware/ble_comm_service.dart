@@ -5,7 +5,6 @@ import '../../../core/constants/hardware_config.dart';
 import '../../../core/utils/logger.dart';
 
 class BleCommService implements IHardwareComm {
-  String? _deviceId;
   final StreamController<HardwareMessage> _statusController = StreamController<HardwareMessage>.broadcast();
 
   @override
@@ -13,7 +12,6 @@ class BleCommService implements IHardwareComm {
 
   @override
   Future<bool> connect(String deviceIdOrAddress) async {
-    _deviceId = deviceIdOrAddress;
     Logger.info('[BLE] Connecting to: $deviceIdOrAddress');
     // TODO: flutter_blue_plus 连接设备
     //   1. 扫描设备 → 连接 GATT
@@ -29,7 +27,6 @@ class BleCommService implements IHardwareComm {
     Logger.info('[BLE] Disconnecting');
     // TODO: 断开 GATT
     await Future.delayed(const Duration(milliseconds: 300));
-    _deviceId = null;
   }
 
   @override

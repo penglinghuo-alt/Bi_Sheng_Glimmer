@@ -47,8 +47,7 @@ class MqttCommService implements IHardwareComm {
 
     final connMsg = MqttConnectMessage()
         .withClientIdentifier(HardwareConfig.mqttClientId)
-        .startClean()
-        .keepAliveFor(HardwareConfig.keepAlivePeriod);
+        .startClean();
 
     _client!.connectionMessage = connMsg;
 

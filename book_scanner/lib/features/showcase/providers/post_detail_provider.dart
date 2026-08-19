@@ -117,7 +117,7 @@ class PostDetailNotifier extends StateNotifier<PostDetailState> {
       final post = state.post;
       state = state.copyWith(
         comments: state.comments.where((c) => c.id != commentId).toList(),
-        post: post == null ? null : post.copyWith(commentCount: post.commentCount > 0 ? post.commentCount - 1 : 0),
+        post: post?.copyWith(commentCount: post.commentCount > 0 ? post.commentCount - 1 : 0),
       );
     } catch (e) {
       // 忽略失败

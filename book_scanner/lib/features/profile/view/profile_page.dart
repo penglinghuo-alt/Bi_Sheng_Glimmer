@@ -154,7 +154,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               if (name.isEmpty) return;
               Navigator.pop(ctx);
               await ref.read(profileProvider.notifier).updateUsername(name);
-              if (mounted) {
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('用户名已更新'), behavior: SnackBarBehavior.floating));
               }
             },
@@ -186,7 +186,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               final bio = ctrl.text.trim();
               Navigator.pop(ctx);
               await ref.read(profileProvider.notifier).updateBio(bio);
-              if (mounted) {
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('签名已更新'), behavior: SnackBarBehavior.floating));
               }
             },
