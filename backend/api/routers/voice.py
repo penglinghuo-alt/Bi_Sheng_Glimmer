@@ -75,10 +75,9 @@ def _get_recognizer():
         joiner=_JOINER,
         num_threads=2,
         decoding_method="greedy_search",
-        enable_endpoint_detection=True,
-        rule1_min_trailing_silence=2.4,
-        rule2_min_trailing_silence=1.2,
-        rule3_min_utterance_length=20,
+        # 关闭端点自动检测：由客户端"按住说话/松开"控制一段话的起止，
+        # 避免说话中途停顿触发自动 reset 导致已识别文本丢失
+        enable_endpoint_detection=False,
     )
     return _recognizer
 
