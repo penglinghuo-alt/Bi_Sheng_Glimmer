@@ -143,7 +143,7 @@ class _NewsPageState extends ConsumerState<NewsPage> {
           if (isHot) ...[
             const SizedBox(height: 8),
             Text(
-              'AI 筛选 · 当前热度最高',
+              'AI 筛选 · 近一周大事件',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: const Color(0xFFFF6B35),
                 fontWeight: FontWeight.w700,

@@ -2,10 +2,11 @@
 
 数据源: https://news.cctv.com (cmsdatainterface JSONP 接口)
 策略:  央视接口优先，失败/超时自动回退到本地兜底数据，避免前端白屏。
-热度:  接入 LLM（DeepSeek）从当前列表中挑选热度最高的 5 条并置顶；
-        未配置 API Key 或调用失败时降级为启发式（取列表前 5）。
+热度:  抓取前 7 页合并为候选池（覆盖近一周），接入 LLM（DeepSeek）从中挑选
+        近一周最重要的大事件 5 条并置顶；未配置 API Key 或调用失败时降级为
+        启发式（取候选池前 5 条）。
 原文:  GET /api/news/detail 抓取新闻网页正文，供前端应用内查看。
-缓存:  新闻列表内存缓存 5 分钟；热度筛选结果独立缓存 5 分钟。
+缓存:  候选池内存缓存 5 分钟；热度筛选结果独立缓存 5 分钟。
 """
 import json
 import os
@@ -24,12 +25,16 @@ router = APIRouter(prefix="/api/news", tags=["AI 新闻"])
 
 CCTV_URL = (
     "https://news.cctv.com/2019/07/gaiban/cmsdatainterface/"
-    "page/news_1.jsonp?cb=cb"
+    "page/news_{n}.jsonp?cb=cb"
 )
+
+# 央视该接口最多约 7 页（每页 80 条），约覆盖近一周新闻
+_CCTV_PAGES = 7
 
 _FALLBACK_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "news_fallback.json")
 
 _HOT_COUNT = 5
+_LATEST_COUNT = 80  # 非热度新闻最多返回条数
 
 _cache: dict = {"ts": 0.0, "items": []}
 _CACHE_TTL = 300.0  # 5 分钟
@@ -64,35 +69,41 @@ class NewsDetailResponse(BaseModel):
     content: str
 
 
-def _fetch_cctv() -> List[dict]:
-    req = urllib.request.Request(CCTV_URL, headers={
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Referer": "https://news.cctv.com/",
-    })
-    with urllib.request.urlopen(req, timeout=8) as resp:
-        raw = resp.read().decode("utf-8", errors="ignore")
+def _fetch_cctv(pages: int = _CCTV_PAGES) -> List[dict]:
+    """抓取前 pages 页并合并去重，得到覆盖近一周的候选池。"""
+    seen: dict = {}
+    for n in range(1, pages + 1):
+        url = CCTV_URL.format(n=n)
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": "https://news.cctv.com/",
+            })
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                raw = resp.read().decode("utf-8", errors="ignore")
 
-    # JSONP 格式: news({...})，提取括号内的 JSON
-    match = re.search(r"news\((.*)\)\s*;?\s*$", raw, re.S)
-    if not match:
-        return []
-    obj = json.loads(match.group(1))
-    items = obj.get("data", {}).get("list", [])
-    out = []
-    for it in items:
-        title = (it.get("title") or "").strip()
-        if not title:
+            # JSONP 格式: news({...})，提取括号内的 JSON
+            match = re.search(r"news\((.*)\)\s*;?\s*$", raw, re.S)
+            if not match:
+                continue
+            obj = json.loads(match.group(1))
+            for it in obj.get("data", {}).get("list", []):
+                title = (it.get("title") or "").strip()
+                nid = str(it.get("id") or "")
+                if not title or not nid or nid in seen:
+                    continue
+                seen[nid] = {
+                    "id": nid,
+                    "title": title,
+                    "brief": (it.get("brief") or "").strip(),
+                    "keywords": (it.get("keywords") or "").strip(),
+                    "url": (it.get("url") or "").strip(),
+                    "focus_date": it.get("focus_date"),
+                    "image": it.get("image") or None,
+                }
+        except Exception:
             continue
-        out.append({
-            "id": str(it.get("id") or ""),
-            "title": title,
-            "brief": (it.get("brief") or "").strip(),
-            "keywords": (it.get("keywords") or "").strip(),
-            "url": (it.get("url") or "").strip(),
-            "focus_date": it.get("focus_date"),
-            "image": it.get("image") or None,
-        })
-    return out
+    return list(seen.values())
 
 
 def _load_fallback() -> List[dict]:
@@ -127,25 +138,26 @@ def _get_items() -> Tuple[str, List[dict]]:
 
 
 def _select_hot_ids(items: List[dict]) -> List[str]:
-    """挑选热度最高的 5 条 id（按热度从高到低）。
+    """挑选近一周最重要的大事件 5 条（按热度从高到低）。
 
-    优先用 LLM 判断；未配置 API Key 或调用失败时，降级为取列表前 5
-    （央视首页要闻本身按重要程度排序）。
+    优先用 LLM 基于候选池（近一周新闻）判断；未配置 API Key 或调用失败时，
+    降级为取候选池前 5 条（候选池按央视页面顺序 = 最新在前）。
     """
     if llm.llm_configured():
         try:
             candidates = [
-                {"id": it["id"], "title": it["title"], "brief": it["brief"]}
+                {"id": it["id"], "title": it["title"], "brief": it["brief"], "date": it.get("focus_date") or ""}
                 for it in items
             ]
             user = (
-                "下面是某新闻平台当前刷新得到的新闻列表（JSON 数组）。\n"
-                "请挑选其中当前公众关注度/热度最高的 %d 条，按热度从高到低排列。\n"
+                "下面是某新闻平台近一周的新闻候选列表（JSON 数组，含标题/摘要/发布时间）。\n"
+                "请从中挑选近一周内最重要、公众关注度最高的大事件 %d 条，按热度从高到低排列。\n"
+                "注意：只选影响大、有持续关注度的重要事件，不要选琐碎的日常新闻。\n"
                 "只返回合法 JSON，格式：{\"hot_ids\": [\"<新闻id>\", ...]}，最多 %d 个，不要输出任何其他内容。\n"
-                "新闻列表：%s"
+                "候选列表：%s"
             ) % (_HOT_COUNT, _HOT_COUNT, json.dumps(candidates, ensure_ascii=False))
             data = llm.chat_json(
-                "你是资深新闻编辑，负责从候选列表中挑选当前热度最高的新闻。只输出合法 JSON。",
+                "你是资深新闻编辑，负责从近一周新闻中挑选最重要的大事件。只输出合法 JSON。",
                 user,
             )
             ids = [str(x) for x in (data.get("hot_ids") or [])]
@@ -307,10 +319,14 @@ def _fetch_article(url: str) -> Tuple[str, str]:
     return title, content
 
 
-@router.get("/latest", response_model=NewsListResponse, summary="获取最新新闻列表（热度前5置顶）")
+@router.get("/latest", response_model=NewsListResponse, summary="获取新闻列表（近一周大事件前5置顶）")
 def get_latest_news() -> NewsListResponse:
     source, items = _get_items()
-    items = _mark_hot([dict(it) for it in items])
+    marked = _mark_hot(items)
+    hot = [it for it in marked if it["is_hot"]]
+    rest = [it for it in marked if not it["is_hot"]]
+    rest.sort(key=lambda it: it.get("focus_date") or "", reverse=True)
+    items = hot + rest[:_LATEST_COUNT]
     return NewsListResponse(
         source=source,
         total=len(items),
