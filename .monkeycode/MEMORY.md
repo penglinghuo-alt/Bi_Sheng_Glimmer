@@ -54,6 +54,14 @@ Entries discovered by the Agent during task execution should follow this format:
 
 [Project Knowledge Summary]
 - Date: 2026-08-20
+- Context: Discovered by Agent while fixing 语音第二次连接报错 "Bad state: Stream has already been listened to"
+- Category: Troubleshooting & Debugging
+- Instructions:
+  - Dart 单订阅 StreamController 的 stream 在 listen 被 cancel 后不能再 listen 第二次，否则抛 "Bad state: Stream has already been listened to"；复用对象（如 WS 客户端）须在每次 connect 时重建 StreamController，或改用 broadcast/每次新建
+  - 采集源（WebAudioSource/AppAudioSource）的 stop() 需加 _running 标志防重入，避免对已关闭的 AudioContext/已停止的 recorder 重复调用抛异常
+
+[Project Knowledge Summary]
+- Date: 2026-08-20
 - Context: Discovered by Agent while managing code submissions
 - Category: Workflow & Collaboration
 - Instructions:

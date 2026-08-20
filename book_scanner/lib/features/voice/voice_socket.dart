@@ -5,12 +5,17 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// WebSocket 客户端：向云端后端推送 PCM 并接收转写结果
 class VoiceSocket {
   WebSocketChannel? _channel;
-  final StreamController<String> _messages = StreamController<String>();
+  StreamController<String> _messages = StreamController<String>();
 
   /// 服务端回推的文本消息流（JSON 字符串）
   Stream<String> get messages => _messages.stream;
 
   Future<void> connect(Uri uri) async {
+    await close();
+    if (!_messages.isClosed) {
+      await _messages.close();
+    }
+    _messages = StreamController<String>();
     _channel = WebSocketChannel.connect(uri);
     _channel!.stream.listen(
       (data) {
@@ -19,6 +24,11 @@ class VoiceSocket {
         }
       },
       onError: (_) {},
+      onDone: () {
+        if (!_messages.isClosed) {
+          _messages.close();
+        }
+      },
     );
   }
 
@@ -32,6 +42,8 @@ class VoiceSocket {
   }
 
   void dispose() {
-    _messages.close();
+    if (!_messages.isClosed) {
+      _messages.close();
+    }
   }
 }

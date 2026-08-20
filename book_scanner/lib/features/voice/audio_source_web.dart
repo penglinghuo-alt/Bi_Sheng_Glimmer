@@ -13,12 +13,14 @@ class WebAudioSource implements AudioSource {
   web.AudioContext? _ctx;
   web.MediaStream? _mediaStream;
   web.ScriptProcessorNode? _processor;
+  bool _running = false;
 
   @override
   Stream<Float32List> get pcmStream => _controller.stream;
 
   @override
   Future<void> start() async {
+    if (_running) return;
     final devices = web.window.navigator.mediaDevices;
     final constraints = web.MediaStreamConstraints(audio: true.toJS);
     final mediaStream = await devices.getUserMedia(constraints).toDart;
@@ -38,10 +40,13 @@ class WebAudioSource implements AudioSource {
     source.connect(processor);
     processor.connect(ctx.destination);
     _processor = processor;
+    _running = true;
   }
 
   @override
   Future<void> stop() async {
+    if (!_running) return;
+    _running = false;
     _processor?.disconnect();
     _processor = null;
     _mediaStream?.getTracks().toDart.forEach((track) => track.stop());
@@ -52,7 +57,9 @@ class WebAudioSource implements AudioSource {
 
   @override
   void dispose() {
-    _controller.close();
+    if (!_controller.isClosed) {
+      _controller.close();
+    }
   }
 }
 
