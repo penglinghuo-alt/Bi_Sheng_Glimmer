@@ -23,7 +23,12 @@ class WebAudioSource implements AudioSource {
     if (_running) return;
     final devices = web.window.navigator.mediaDevices;
     final constraints = web.MediaStreamConstraints(audio: true.toJS);
-    final mediaStream = await devices.getUserMedia(constraints).toDart;
+    late web.MediaStream mediaStream;
+    try {
+      mediaStream = await devices.getUserMedia(constraints).toDart;
+    } catch (e) {
+      throw Exception('无法访问麦克风：请确认页面为 https 或 localhost，且浏览器已允许麦克风权限（$e）');
+    }
     _mediaStream = mediaStream;
 
     final ctx = web.AudioContext();
