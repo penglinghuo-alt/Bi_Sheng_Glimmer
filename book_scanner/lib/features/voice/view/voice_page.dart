@@ -203,7 +203,10 @@ class _VoicePageState extends ConsumerState<VoicePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('已保存到存储库'), behavior: SnackBarBehavior.floating),
       );
-      Navigator.pop(context);
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
     }
   }
 }

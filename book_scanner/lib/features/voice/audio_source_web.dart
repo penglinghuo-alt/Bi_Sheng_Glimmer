@@ -6,6 +6,23 @@ import 'package:web/web.dart' as web;
 
 import 'audio_source.dart';
 
+/// 线性插值重采样到 16kHz（浏览器麦克风常为 44.1k/48k，后端要求 16k）
+Float32List resampleTo16k(Float32List input, int fromRate) {
+  const toRate = 16000;
+  if (fromRate == toRate || input.isEmpty) return input;
+  final ratio = fromRate / toRate;
+  final outLen = (input.length / ratio).floor();
+  final out = Float32List(outLen);
+  for (var i = 0; i < outLen; i++) {
+    final pos = i * ratio;
+    final i0 = pos.floor();
+    final frac = pos - i0;
+    final i1 = i0 + 1 < input.length ? i0 + 1 : i0;
+    out[i] = input[i0] * (1 - frac) + input[i1] * frac;
+  }
+  return out;
+}
+
 /// Web 采集实现：getUserMedia + AudioContext ScriptProcessor 拿 float32 PCM
 class WebAudioSource implements AudioSource {
   final StreamController<Float32List> _controller =
@@ -33,13 +50,16 @@ class WebAudioSource implements AudioSource {
 
     final ctx = web.AudioContext();
     _ctx = ctx;
+    await ctx.resume().toDart;
     final source = ctx.createMediaStreamSource(mediaStream);
     final processor = ctx.createScriptProcessor(4096, 1, 1);
+    final sampleRate = ctx.sampleRate.round();
     processor.addEventListener('audioprocess', ((web.Event event) {
       final evt = event as web.AudioProcessingEvent;
-      final samples = evt.inputBuffer.getChannelData(0).toDart;
-      if (!_controller.isClosed) {
-        _controller.add(Float32List.fromList(samples));
+      var samples = evt.inputBuffer.getChannelData(0).toDart;
+      samples = resampleTo16k(samples, sampleRate);
+      if (!_controller.isClosed && samples.isNotEmpty) {
+        _controller.add(samples);
       }
     }).toJS);
     source.connect(processor);
