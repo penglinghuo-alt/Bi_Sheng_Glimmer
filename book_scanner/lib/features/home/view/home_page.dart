@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_enums.dart';
 import '../../../../core/providers/device_provider.dart';
+import '../../../../core/constants/route_names.dart';
 import '../../../../shared/widgets/device_status_bar.dart';
 import '../../../../data/local_db/database_helper.dart';
 import '../../../../data/models/braille_record.dart';
@@ -422,6 +424,19 @@ class _HomePageState extends ConsumerState<HomePage> {
     final canStart = (homeState.selectedMode == PrintMode.scanAndPrint || homeState.selectedRecord != null) && isConnected;
 
     return Column(children: [
+      SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: () => context.go(RouteNames.voice),
+          icon: const Icon(Icons.mic_rounded, size: 20),
+          label: const Text('语音输入', style: TextStyle(fontWeight: FontWeight.w600)),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      ),
+      const SizedBox(height: 12),
       SizedBox(
         width: double.infinity,
         child: FilledButton.icon(

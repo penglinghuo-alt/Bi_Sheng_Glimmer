@@ -13,4 +13,5 @@ class RouteNames {
   static const String userProfile = '/user-profile';
   static const String publish = '/publish';
   static const String favorites = '/favorites';
+  static const String voice = '/voice';
 }
