@@ -9,6 +9,9 @@ abstract class AudioSource {
   /// 采集到的 PCM 采样流
   Stream<Float32List> get pcmStream;
 
+  /// 当前实际使用的输入设备名称（web 返回麦克风 label，app 返回 null）
+  String? get deviceName;
+
   Future<void> start();
 
   Future<void> stop();

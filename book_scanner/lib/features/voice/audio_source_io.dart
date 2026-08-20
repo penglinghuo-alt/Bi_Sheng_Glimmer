@@ -18,6 +18,9 @@ class AppAudioSource implements AudioSource {
   Stream<Float32List> get pcmStream => _controller.stream;
 
   @override
+  String? get deviceName => null;
+
+  @override
   Future<void> start() async {
     if (_running) return;
     final ok = await _recorder.hasPermission();

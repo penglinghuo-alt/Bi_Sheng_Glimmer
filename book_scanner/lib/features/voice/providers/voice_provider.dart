@@ -17,12 +17,14 @@ class VoiceState {
   final String partialText;
   final String finalText;
   final String? error;
+  final String? deviceName;
 
   const VoiceState({
     this.status = VoiceStatus.idle,
     this.partialText = '',
     this.finalText = '',
     this.error,
+    this.deviceName,
   });
 
   VoiceState copyWith({
@@ -30,12 +32,14 @@ class VoiceState {
     String? partialText,
     String? finalText,
     String? error,
+    String? deviceName,
   }) {
     return VoiceState(
       status: status ?? this.status,
       partialText: partialText ?? this.partialText,
       finalText: finalText ?? this.finalText,
       error: error ?? this.error,
+      deviceName: deviceName ?? this.deviceName,
     );
   }
 }
@@ -106,7 +110,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
         const Duration(seconds: 8),
         onTimeout: () => throw Exception('麦克风授权无响应：请确认已允许麦克风权限，且使用 https 或 localhost 访问'),
       );
-      state = state.copyWith(status: VoiceStatus.recording);
+      state = state.copyWith(status: VoiceStatus.recording, deviceName: _source?.deviceName);
     } catch (e) {
       await _cleanup();
       state = state.copyWith(status: VoiceStatus.error, error: '启动录音失败：$e');

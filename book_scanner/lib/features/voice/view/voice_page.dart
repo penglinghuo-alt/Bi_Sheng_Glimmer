@@ -108,6 +108,17 @@ class _VoicePageState extends ConsumerState<VoicePage> {
             const SizedBox(width: 8),
             Text(_statusLabel(state), style: theme.textTheme.titleMedium),
           ]),
+          if (state.deviceName != null) ...[
+            const SizedBox(height: 4),
+            Row(children: [
+              Icon(Icons.mic_none_rounded, size: 14, color: theme.colorScheme.outline),
+              const SizedBox(width: 6),
+              Text(
+                '麦克风：${state.deviceName}',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              ),
+            ]),
+          ],
           const SizedBox(height: 16),
           if (display.isEmpty && state.error == null)
             Text('按住下方按钮开始录音，松开停止。实时语音将自动转换为文字。', style: theme.textTheme.bodyMedium)

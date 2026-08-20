@@ -31,22 +31,72 @@ class WebAudioSource implements AudioSource {
   web.MediaStream? _mediaStream;
   web.ScriptProcessorNode? _processor;
   bool _running = false;
+  String? _deviceName;
 
   @override
   Stream<Float32List> get pcmStream => _controller.stream;
 
   @override
-  Future<void> start() async {
-    if (_running) return;
+  String? get deviceName => _deviceName;
+
+  Future<web.MediaStream> _acquire(web.MediaStreamConstraints constraints) async {
     final devices = web.window.navigator.mediaDevices;
-    final constraints = web.MediaStreamConstraints(audio: true.toJS);
-    late web.MediaStream mediaStream;
     try {
-      mediaStream = await devices.getUserMedia(constraints).toDart;
+      return await devices.getUserMedia(constraints).toDart;
     } catch (e) {
       throw Exception('无法访问麦克风：请确认页面为 https 或 localhost，且浏览器已允许麦克风权限（$e）');
     }
+  }
+
+  /// 优先使用 USB 外接麦克风：先拿默认授权流，再枚举设备，
+  /// 若存在 USB 设备且当前用的不是它，则切换；切换失败回退默认
+  Future<web.MediaStream> _acquirePreferred() async {
+    var stream = await _acquire(web.MediaStreamConstraints(audio: true.toJS));
+    try {
+      final usbId = await _findUsbDeviceId();
+      if (usbId == null) return stream;
+      final tracks = stream.getAudioTracks().toDart;
+      final current = tracks.isEmpty ? null : tracks.first;
+      if (current != null && current.label.toLowerCase().contains('usb')) {
+        return stream;
+      }
+      final usbStream = await _acquire(web.MediaStreamConstraints(
+        audio: {'deviceId': {'exact': usbId}}.jsify()!,
+      ));
+      stream.getTracks().toDart.forEach((track) => track.stop());
+      return usbStream;
+    } catch (_) {
+      return stream;
+    }
+  }
+
+  Future<String?> _findUsbDeviceId() async {
+    try {
+      final infos = (await web.window.navigator.mediaDevices
+              .enumerateDevices()
+              .toDart)
+          .toDart;
+      for (final info in infos) {
+        if (info.kind == 'audioinput' &&
+            info.label.toLowerCase().contains('usb')) {
+          return info.deviceId;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  @override
+  Future<void> start() async {
+    if (_running) return;
+    final mediaStream = await _acquirePreferred();
     _mediaStream = mediaStream;
+
+    final tracks = mediaStream.getAudioTracks().toDart;
+    final track = tracks.isEmpty ? null : tracks.first;
+    _deviceName = (track != null && track.label.isNotEmpty)
+        ? track.label
+        : '默认麦克风';
 
     final ctx = web.AudioContext();
     _ctx = ctx;
