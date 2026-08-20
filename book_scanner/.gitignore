@@ -36,6 +36,9 @@ migrate_working_dir/
 # Symbolication related
 app.*.symbols
 
+# Local canvaskit binaries (copied from local Flutter SDK, version-specific)
+/web/canvaskit/
+
 # Obfuscation related
 app.*.map.json
 
