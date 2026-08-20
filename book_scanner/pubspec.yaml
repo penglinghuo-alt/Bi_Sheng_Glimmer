@@ -40,8 +40,8 @@ dependencies:
   shimmer: ^3.0.0
   animations: ^2.0.11
   flutter_animate: ^4.5.2
-  sherpa_onnx: ^1.13.6
   record: ^7.1.1
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
@@ -54,5 +54,3 @@ flutter:
     - family: Noto Sans SC
       fonts:
         - asset: assets/fonts/NotoSansSC-Regular.otf
-  assets:
-    - assets/models/zh14m/

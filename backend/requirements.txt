@@ -9,3 +9,5 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.18
 python-dotenv==1.0.1
 alembic==1.14.0
+sherpa-onnx>=1.11.5
+numpy>=2.0.0

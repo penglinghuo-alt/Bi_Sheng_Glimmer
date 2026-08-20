@@ -1,13 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:record/record.dart';
 
 import '../../../data/services/api_client.dart';
-import '../speech_to_text_service.dart';
+import '../audio_source.dart';
+import '../voice_socket.dart';
 
-enum VoiceStatus { idle, initializing, recording, processing, saving, done, error }
+enum VoiceStatus { idle, starting, recording, processing, saving, done, error }
 
 class VoiceState {
   final VoiceStatus status;
@@ -37,104 +39,119 @@ class VoiceState {
   }
 }
 
-final speechToTextServiceProvider = Provider<SpeechToTextService>((ref) => SpeechToTextService());
-
 final voiceProvider = StateNotifierProvider<VoiceNotifier, VoiceState>((ref) {
-  final service = ref.read(speechToTextServiceProvider);
-  return VoiceNotifier(service);
+  return VoiceNotifier(ApiClient());
 });
 
 class VoiceNotifier extends StateNotifier<VoiceState> {
-  VoiceNotifier(this._service) : super(const VoiceState());
+  VoiceNotifier(this._api) : super(const VoiceState());
 
-  final SpeechToTextService _service;
-  final AudioRecorder _recorder = AudioRecorder();
-  StreamSubscription<Uint8List>? _sub;
+  final ApiClient _api;
+  final VoiceSocket _socket = VoiceSocket();
+  AudioSource? _source;
+  StreamSubscription<Float32List>? _pcmSub;
+  StreamSubscription<String>? _msgSub;
+  Completer<String>? _finalCompleter;
+  Timer? _finalTimer;
 
-  /// 初始化本地 ASR 模型（首次进入时调用一次）
-  Future<void> init() async {
-    if (_service.isInitialized || state.status == VoiceStatus.initializing) return;
-    state = state.copyWith(status: VoiceStatus.initializing);
-    try {
-      await _service.init();
-      state = state.copyWith(status: VoiceStatus.idle);
-    } catch (e) {
-      state = state.copyWith(status: VoiceStatus.error, error: '模型加载失败：$e');
+  Uri get _wsUri {
+    if (kIsWeb) {
+      final base = Uri.base;
+      return base.replace(
+        scheme: base.scheme == 'https' ? 'wss' : 'ws',
+        path: '/api/voice/ws',
+      );
     }
+    final base = Uri.parse(ApiClient.baseUrl);
+    return base.replace(
+      scheme: base.scheme == 'https' ? 'wss' : 'ws',
+      path: '/api/voice/ws',
+    );
   }
 
-  /// Web 端不支持原生 sherpa-onnx 转写时的降级提示
-  void setWebUnsupported() {
-    state = state.copyWith(status: VoiceStatus.error, error: '网页端暂不支持本地语音转写，请在 App 中使用');
-  }
-
-  /// 开始录音并流式转写
+  /// 启动：连接后端 WS、开始本地采集并实时推流
   Future<void> startRecording() async {
     if (state.status == VoiceStatus.recording) return;
+    state = state.copyWith(status: VoiceStatus.starting, partialText: '', finalText: '', error: null);
     try {
-      final ok = await _recorder.hasPermission();
-      if (!ok) {
-        state = state.copyWith(status: VoiceStatus.error, error: '未获得麦克风权限');
-        return;
-      }
-      await init();
-      if (!_service.isInitialized) return;
+      await _socket.connect(_wsUri);
+      _msgSub = _socket.messages.listen(_onMessage);
+      _socket.sendText('{"type":"start"}');
 
-      _service.startSession();
-      final stream = await _recorder.startStream(
-        const RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: 16000,
-          numChannels: 1,
-        ),
-      );
-      _sub = stream.listen((chunk) {
-        final samples = pcm16ToFloat32(chunk);
-        _service.acceptPcm(samples);
-        final partial = _service.currentText;
-        if (partial != state.partialText) {
-          state = state.copyWith(status: VoiceStatus.recording, partialText: partial);
-        }
+      _source = createAudioSource();
+      _pcmSub = _source!.pcmStream.listen((samples) {
+        final bytes = samples.buffer.asInt8List();
+        _socket.sendBytes(bytes);
       });
-      state = state.copyWith(status: VoiceStatus.recording, partialText: '', finalText: '');
+      await _source!.start();
+      state = state.copyWith(status: VoiceStatus.recording);
     } catch (e) {
-      state = state.copyWith(status: VoiceStatus.error, error: '录音启动失败：$e');
+      await _cleanup();
+      state = state.copyWith(status: VoiceStatus.error, error: '启动录音失败：$e');
     }
   }
 
-  /// 停止录音，得到最终转写文本
+  void _onMessage(String raw) {
+    Map<String, dynamic> msg;
+    try {
+      msg = jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return;
+    }
+    switch (msg['type']) {
+      case 'partial':
+        final text = msg['text'] as String? ?? '';
+        if (state.status == VoiceStatus.recording && text != state.partialText) {
+          state = state.copyWith(partialText: text);
+        }
+      case 'final':
+        _finalCompleter?.complete(msg['text'] as String? ?? '');
+      case 'error':
+        state = state.copyWith(status: VoiceStatus.error, error: msg['detail'] as String? ?? '转写服务出错');
+        _finalCompleter?.complete('');
+    }
+  }
+
+  /// 停止：结束本地采集，通知后端返回最终文本
   Future<void> stopRecording() async {
     if (state.status != VoiceStatus.recording) return;
     state = state.copyWith(status: VoiceStatus.processing);
     try {
-      await _sub?.cancel();
-      _sub = null;
-      await _recorder.stop();
-      final text = _service.finish();
-      state = state.copyWith(status: VoiceStatus.done, partialText: '', finalText: text.trim());
+      await _source?.stop();
+      _pcmSub?.cancel();
+      _pcmSub = null;
+
+      final completer = Completer<String>();
+      _finalCompleter = completer;
+      _socket.sendText('{"type":"stop"}');
+
+      final timer = Timer(const Duration(seconds: 8), () {
+        if (!completer.isCompleted) completer.complete('');
+      });
+      _finalTimer = timer;
+
+      final text = await completer.future;
+      timer.cancel();
+      _finalCompleter = null;
+      await _cleanup();
+      state = state.copyWith(
+        status: VoiceStatus.done,
+        partialText: '',
+        finalText: text.trim(),
+      );
     } catch (e) {
+      await _cleanup();
       state = state.copyWith(status: VoiceStatus.error, error: '停止录音失败：$e');
     }
   }
 
-  /// 将转写文字上传到后端，存入存储库（MySQL）
+  /// 将转写文字保存到存储库（后端建记录）
   Future<bool> save({String? title}) async {
     final text = state.finalText;
     if (text.isEmpty) return false;
     state = state.copyWith(status: VoiceStatus.saving);
     try {
-      final api = ApiClient();
-      final now = DateTime.now();
-      final t = (title != null && title.trim().isNotEmpty)
-          ? title.trim()
-          : '语音输入_${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-      await api.createRecord({
-        'title': t,
-        'source_type': '语音输入',
-        'text_content': text,
-        'dot_matrix_width': 0,
-        'dot_matrix_height': 0,
-      });
+      await _api.saveVoice(title: title ?? '', text: text);
       state = state.copyWith(status: VoiceStatus.idle, finalText: '', partialText: '');
       return true;
     } catch (e) {
@@ -145,15 +162,29 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
 
   /// 清空当前转写结果
   void reset() {
-    _service.resetEndpoint();
+    _finalTimer?.cancel();
+    _cleanup();
     state = state.copyWith(status: VoiceStatus.idle, partialText: '', finalText: '', error: null);
+  }
+
+  Future<void> _cleanup() async {
+    _finalTimer?.cancel();
+    _finalTimer = null;
+    await _source?.stop();
+    _source?.dispose();
+    _source = null;
+    await _pcmSub?.cancel();
+    _pcmSub = null;
+    await _msgSub?.cancel();
+    _msgSub = null;
+    await _socket.close();
   }
 
   @override
   void dispose() {
-    _sub?.cancel();
-    _recorder.dispose();
-    _service.dispose();
+    _finalTimer?.cancel();
+    _cleanup();
+    _socket.dispose();
     super.dispose();
   }
 }

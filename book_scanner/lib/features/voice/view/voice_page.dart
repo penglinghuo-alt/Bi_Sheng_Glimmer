@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,20 +13,8 @@ class VoicePage extends ConsumerStatefulWidget {
 class _VoicePageState extends ConsumerState<VoicePage> {
   bool _pressed = false;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (kIsWeb) {
-        ref.read(voiceProvider.notifier).setWebUnsupported();
-      } else {
-        ref.read(voiceProvider.notifier).init();
-      }
-    });
-  }
-
   void _start() {
-    if (_pressed || kIsWeb) return;
+    if (_pressed) return;
     _pressed = true;
     ref.read(voiceProvider.notifier).startRecording();
   }
@@ -133,8 +120,8 @@ class _VoicePageState extends ConsumerState<VoicePage> {
 
   String _statusLabel(VoiceState state) {
     switch (state.status) {
-      case VoiceStatus.initializing:
-        return '正在加载语音模型…';
+      case VoiceStatus.starting:
+        return '正在启动后端录音…';
       case VoiceStatus.recording:
         return '录音中…';
       case VoiceStatus.processing:
@@ -163,7 +150,7 @@ class _VoicePageState extends ConsumerState<VoicePage> {
 
   Widget _recordButton(ThemeData theme, VoiceState state) {
     final recording = state.status == VoiceStatus.recording;
-    final busy = state.status == VoiceStatus.initializing ||
+    final busy = state.status == VoiceStatus.starting ||
         state.status == VoiceStatus.processing ||
         state.status == VoiceStatus.saving;
 

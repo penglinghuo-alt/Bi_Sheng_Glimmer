@@ -120,6 +120,13 @@ class ApiClient {
     return res.data;
   }
 
+  // ─── Voice（客户端采集 PCM，经 WebSocket 推流到后端转写）──
+
+  Future<Map<String, dynamic>> saveVoice({String title = '', required String text}) async {
+    final res = await _dio.post('/api/voice/save', data: {'title': title, 'text': text});
+    return res.data;
+  }
+
   Future<Map<String, dynamic>> renameRecord(String id, String title) async {
     final res = await _dio.put('/api/records/$id', data: {'title': title});
     return res.data;
