@@ -10,14 +10,19 @@ class VoiceSocket {
   /// 服务端回推的文本消息流（JSON 字符串）
   Stream<String> get messages => _messages.stream;
 
+  /// 是否已建立连接（connect 成功后为 true）
+  bool get isConnected => _channel != null;
+
   Future<void> connect(Uri uri) async {
     await close();
     if (!_messages.isClosed) {
       await _messages.close();
     }
     _messages = StreamController<String>();
-    _channel = WebSocketChannel.connect(uri);
-    _channel!.stream.listen(
+    final channel = WebSocketChannel.connect(uri);
+    await channel.ready.timeout(const Duration(seconds: 12));
+    _channel = channel;
+    channel.stream.listen(
       (data) {
         if (data is String && !_messages.isClosed) {
           _messages.add(data);

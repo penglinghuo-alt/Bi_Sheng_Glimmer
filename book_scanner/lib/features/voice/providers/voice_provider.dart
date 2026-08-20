@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/local_db/database_helper.dart';
+import '../../../data/models/braille_record.dart';
 import '../../../data/services/api_client.dart';
 import '../audio_source.dart';
 import '../voice_socket.dart';
@@ -61,15 +63,37 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     );
   }
 
+  /// 预连接语音服务（进入页面时调用），使首次录音无需等待建连
+  Future<void> init() async {
+    if (_socket.isConnected) return;
+    try {
+      await _socket.connect(_wsUri);
+    } catch (_) {
+      // 预连接失败不打扰，录音时会重试
+    }
+  }
+
+  Future<void> _ensureConnected() async {
+    if (_socket.isConnected) return;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        await _socket.connect(_wsUri).timeout(
+          const Duration(seconds: 12),
+          onTimeout: () => throw Exception('连接语音服务超时'),
+        );
+        return;
+      } catch (_) {
+        if (attempt == 1) rethrow;
+      }
+    }
+  }
+
   /// 启动：连接后端 WS、开始本地采集并实时推流
   Future<void> startRecording() async {
     if (state.status == VoiceStatus.recording) return;
     state = state.copyWith(status: VoiceStatus.starting, partialText: '', finalText: '', error: null);
     try {
-      await _socket.connect(_wsUri).timeout(
-        const Duration(seconds: 8),
-        onTimeout: () => throw Exception('连接语音服务超时'),
-      );
+      await _ensureConnected();
       _msgSub = _socket.messages.listen(_onMessage);
       _socket.sendText('{"type":"start"}');
 
@@ -143,13 +167,26 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     }
   }
 
-  /// 将转写文字保存到存储库（后端建记录）
+  /// 将转写文字保存到存储库（后端建记录），并同步到本地缓存
   Future<bool> save({String? title}) async {
     final text = state.finalText;
     if (text.isEmpty) return false;
     state = state.copyWith(status: VoiceStatus.saving);
     try {
-      await _api.saveVoice(title: title ?? '', text: text);
+      final res = await _api.saveVoice(title: title ?? '', text: text);
+      final id = res['id'] as String? ?? '';
+      final savedTitle = (res['title'] as String?) ?? '语音输入';
+      DatabaseHelper().addRecord(BrailleRecord(
+        id: id,
+        title: savedTitle,
+        sourceType: '语音输入',
+        dotMatrixWidth: 0,
+        dotMatrixHeight: 0,
+        dotMatrixData: [],
+        textContent: text,
+        createdAt: DateTime.now(),
+        pageCount: 1,
+      ));
       state = state.copyWith(status: VoiceStatus.idle, finalText: '', partialText: '');
       return true;
     } catch (e) {

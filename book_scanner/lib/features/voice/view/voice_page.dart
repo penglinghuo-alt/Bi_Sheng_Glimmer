@@ -13,6 +13,12 @@ class VoicePage extends ConsumerStatefulWidget {
 class _VoicePageState extends ConsumerState<VoicePage> {
   bool _pressed = false;
 
+  @override
+  void initState() {
+    super.initState();
+    ref.read(voiceProvider.notifier).init();
+  }
+
   void _start() {
     if (_pressed) return;
     _pressed = true;
