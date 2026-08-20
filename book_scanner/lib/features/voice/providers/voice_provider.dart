@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/services/api_client.dart';
@@ -55,13 +54,6 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   Timer? _finalTimer;
 
   Uri get _wsUri {
-    if (kIsWeb) {
-      final base = Uri.base;
-      return base.replace(
-        scheme: base.scheme == 'https' ? 'wss' : 'ws',
-        path: '/api/voice/ws',
-      );
-    }
     final base = Uri.parse(ApiClient.baseUrl);
     return base.replace(
       scheme: base.scheme == 'https' ? 'wss' : 'ws',
