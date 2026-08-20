@@ -6,6 +6,8 @@ class NewsItem {
   final String url;
   final String? focusDate;
   final String? image;
+  final bool isHot;
+  final int? hotRank;
 
   const NewsItem({
     required this.id,
@@ -15,6 +17,8 @@ class NewsItem {
     required this.url,
     this.focusDate,
     this.image,
+    this.isHot = false,
+    this.hotRank,
   });
 
   factory NewsItem.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,8 @@ class NewsItem {
       url: (json['url'] as String?) ?? '',
       focusDate: json['focus_date'] as String?,
       image: json['image'] as String?,
+      isHot: (json['is_hot'] as bool?) ?? false,
+      hotRank: json['hot_rank'] as int?,
     );
   }
 }

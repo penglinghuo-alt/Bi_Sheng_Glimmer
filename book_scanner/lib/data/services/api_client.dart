@@ -191,6 +191,16 @@ class ApiClient {
     return res.data;
   }
 
+  /// 抓取新闻原文正文（后端抓网页，超时放宽）
+  Future<Map<String, dynamic>> fetchNewsDetail(String url) async {
+    final res = await _dio.get(
+      '/api/news/detail',
+      queryParameters: {'url': url},
+      options: Options(receiveTimeout: const Duration(seconds: 20)),
+    );
+    return res.data;
+  }
+
   // ─── Logs ────────────────────────────────────────
 
   Future<Map<String, dynamic>> getLogs({String? deviceId, int limit = 50}) async {

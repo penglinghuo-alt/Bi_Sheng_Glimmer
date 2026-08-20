@@ -9,6 +9,7 @@ class RouteNames {
   static const String deviceManage = '/device-manage';
   static const String showcase = '/showcase';
   static const String news = '/news';
+  static const String newsDetail = '/news/detail';
   static const String postDetail = '/post-detail';
   static const String userProfile = '/user-profile';
   static const String publish = '/publish';

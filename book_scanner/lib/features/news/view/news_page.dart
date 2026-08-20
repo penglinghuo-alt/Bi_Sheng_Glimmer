@@ -81,77 +81,125 @@ class _NewsPageState extends ConsumerState<NewsPage> {
   }
 
   Widget _newsCard(ThemeData theme, NewsItem item) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 34, height: 34,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+    final isHot = item.isHot;
+    final bg = isHot
+        ? Color.lerp(theme.colorScheme.primaryContainer, theme.colorScheme.surface, 0.3)!
+        : theme.colorScheme.surfaceContainerHighest;
+
+    return InkWell(
+      onTap: isHot
+          ? (item.url.isEmpty ? null : () => _openDetail(item))
+          : (item.url.isEmpty ? null : () => _openOriginal(item)),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+          border: isHot
+              ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.55), width: 1.4)
+              : Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+          boxShadow: isHot
+              ? [BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.14), blurRadius: 14, offset: const Offset(0, 4))]
+              : null,
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 34, height: 34,
+              decoration: BoxDecoration(
+                color: (isHot ? const Color(0xFFFF6B35) : AppColors.primary).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(isHot ? Icons.local_fire_department_rounded : Icons.article_rounded,
+                  size: 18, color: isHot ? const Color(0xFFFF6B35) : AppColors.primary),
             ),
-            child: const Icon(Icons.article_rounded, size: 18, color: AppColors.primary),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              item.title,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, height: 1.3),
+            const SizedBox(width: 10),
+            if (isHot && item.hotRank != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFFFF6B35), Color(0xFFFFA041)]),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'TOP ${item.hotRank}',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                item.title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1.3,
+                  color: isHot ? theme.colorScheme.primary : null,
+                ),
+              ),
             ),
-          ),
-        ]),
-        if (item.brief.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Text(
-            item.brief,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
-              height: 1.5,
-            ),
-          ),
-        ],
-        if (item.keywords.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: item.keywords
-                .split(RegExp(r'[\s,，、]+'))
-                .where((k) => k.isNotEmpty)
-                .take(5)
-                .map((k) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        k,
-                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSecondaryContainer),
-                      ),
-                    ))
-                .toList(),
-          ),
-        ],
-        const SizedBox(height: 12),
-        Row(children: [
-          if (item.focusDate != null && item.focusDate!.isNotEmpty)
+          ]),
+          if (isHot) ...[
+            const SizedBox(height: 8),
             Text(
-              item.focusDate!,
-              style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+              'AI 筛选 · 当前热度最高',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: const Color(0xFFFF6B35),
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          const Spacer(),
-          _cardAction(theme, Icons.print_rounded, '打印', () => _sendToBraille(item)),
-          const SizedBox(width: 6),
-          _cardAction(theme, Icons.open_in_new_rounded, '原文', () => _openOriginal(item)),
+          ],
+          if (item.brief.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              item.brief,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                height: 1.5,
+              ),
+            ),
+          ],
+          if (item.keywords.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: item.keywords
+                  .split(RegExp(r'[\s,，、]+'))
+                  .where((k) => k.isNotEmpty)
+                  .take(5)
+                  .map((k) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          k,
+                          style: TextStyle(fontSize: 11, color: theme.colorScheme.onSecondaryContainer),
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(children: [
+            if (item.focusDate != null && item.focusDate!.isNotEmpty)
+              Text(
+                item.focusDate!,
+                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+              ),
+            const Spacer(),
+            _cardAction(theme, Icons.print_rounded, '打印', () => _sendToBraille(item)),
+            const SizedBox(width: 6),
+            _cardAction(theme,
+                isHot ? Icons.menu_book_rounded : Icons.open_in_new_rounded,
+                isHot ? '查看原文' : '原文',
+                isHot ? () => _openDetail(item) : () => _openOriginal(item)),
+          ]),
         ]),
-      ]),
+      ),
     );
   }
 
@@ -204,6 +252,14 @@ class _NewsPageState extends ConsumerState<NewsPage> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  void _openDetail(NewsItem item) {
+    final uri = Uri(
+      path: RouteNames.newsDetail,
+      queryParameters: {'title': item.title, 'url': item.url},
+    );
+    context.push(uri.toString());
   }
 
   Widget _emptyState(ThemeData theme, String? error) {

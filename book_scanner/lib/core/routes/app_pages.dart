@@ -15,6 +15,7 @@ import '../../features/showcase/view/user_profile_page.dart';
 import '../../features/showcase/view/publish_page.dart';
 import '../../features/showcase/view/favorites_page.dart';
 import '../../features/news/view/news_page.dart';
+import '../../features/news/view/news_detail_page.dart';
 import '../../features/voice/view/voice_page.dart';
 
 final authRedirectNotifier = ValueNotifier<bool>(false);
@@ -63,6 +64,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RouteNames.news,
             builder: (_, state) => const NewsPage(),
+          ),
+          GoRoute(
+            path: RouteNames.newsDetail,
+            builder: (_, state) => NewsDetailPage(
+              title: state.uri.queryParameters['title'] ?? '',
+              url: state.uri.queryParameters['url'] ?? '',
+            ),
           ),
           GoRoute(
             path: RouteNames.voice,
