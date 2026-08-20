@@ -40,6 +40,8 @@ _cache: dict = {"ts": 0.0, "items": []}
 _CACHE_TTL = 300.0  # 5 分钟
 
 _hot_cache: dict = {"ts": 0.0, "ids": []}
+# AI 筛选结果缓存 1 天：每天最多调 1 次 LLM 重选大事件，省成本
+_HOT_CACHE_TTL = 86400.0
 
 _article_cache: dict = {"ts": {}, "items": {}}
 _ARTICLE_TTL = 600.0  # 10 分钟
@@ -171,9 +173,9 @@ def _select_hot_ids(items: List[dict]) -> List[str]:
 
 
 def _mark_hot(items: List[dict]) -> List[dict]:
-    """标记热度最高的 5 条并置顶（带独立缓存，避免频繁调 LLM）。"""
+    """标记热度最高的 5 条并置顶（AI 结果缓存 1 天，避免频繁调 LLM）。"""
     now = time.time()
-    if now - _hot_cache["ts"] >= _CACHE_TTL or not _hot_cache["ids"]:
+    if now - _hot_cache["ts"] >= _HOT_CACHE_TTL or not _hot_cache["ids"]:
         _hot_cache["ids"] = _select_hot_ids(items)
         _hot_cache["ts"] = now
 
