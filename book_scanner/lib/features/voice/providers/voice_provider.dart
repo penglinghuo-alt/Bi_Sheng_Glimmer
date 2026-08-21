@@ -106,10 +106,9 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
         final bytes = samples.buffer.asInt8List();
         _socket.sendBytes(bytes);
       });
-      await _source!.start().timeout(
-        const Duration(seconds: 8),
-        onTimeout: () => throw Exception('麦克风授权无响应：请确认已允许麦克风权限，且使用 https 或 localhost 访问'),
-      );
+      // 不设硬超时：等待用户授权。用户拒绝时 getUserMedia 会自行 reject 并给出明确错误；
+      // 用户允许后正常开始采集，避免"授权稍慢就误报超时"导致无法重试。
+      await _source!.start();
       state = state.copyWith(status: VoiceStatus.recording, deviceName: _source?.deviceName);
     } catch (e) {
       await _cleanup();

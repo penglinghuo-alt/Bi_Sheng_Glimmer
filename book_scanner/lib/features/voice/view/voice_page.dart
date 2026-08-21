@@ -17,10 +17,19 @@ class _VoicePageState extends ConsumerState<VoicePage> {
   void initState() {
     super.initState();
     ref.read(voiceProvider.notifier).init();
+    // 录音结束（无论成功/失败/出错）都释放按键锁，保证可再次按住重试
+    ref.listen(voiceProvider.select((s) => s.status), (prev, next) {
+      if (next != VoiceStatus.recording && next != VoiceStatus.starting) {
+        _pressed = false;
+      }
+    });
   }
 
   void _start() {
-    if (_pressed) return;
+    final status = ref.read(voiceProvider).status;
+    if (_pressed || status == VoiceStatus.recording || status == VoiceStatus.starting) {
+      return;
+    }
     _pressed = true;
     ref.read(voiceProvider.notifier).startRecording();
   }
@@ -129,6 +138,9 @@ class _VoicePageState extends ConsumerState<VoicePage> {
           if (state.error != null) ...[
             const SizedBox(height: 12),
             Text(state.error!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+            const SizedBox(height: 6),
+            Text('点击下方"按住说话"可重新尝试连接',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
           ],
         ],
       ),
