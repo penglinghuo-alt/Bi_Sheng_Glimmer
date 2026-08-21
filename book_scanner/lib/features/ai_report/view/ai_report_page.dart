@@ -30,7 +30,9 @@ class _AiReportPageState extends ConsumerState<AiReportPage> {
     final s = ref.read(aiReportProvider);
     _topicController = TextEditingController(text: s.topic);
     _extraController = TextEditingController(text: s.extra);
-    ref.read(aiReportProvider.notifier).enter();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(aiReportProvider.notifier).enter();
+    });
   }
 
   @override
