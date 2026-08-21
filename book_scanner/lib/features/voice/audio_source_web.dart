@@ -33,6 +33,17 @@ class WebAudioSource implements AudioSource {
   bool _running = false;
   String? _deviceName;
 
+  /// 内置麦克风的特征词（命中即视为内置，优先排除）
+  static const _builtinHints = [
+    'built-in', 'builtin', 'internal', 'integrated', 'realtek',
+    'default', '内置', '集成', '内建',
+  ];
+
+  /// 外接麦克风的特征词（命中即视为外接，优先选择）
+  static const _externalHints = [
+    'usb', '4-mic', 'hikvision', 'conference', 'webcam', '外接', 'usb audio',
+  ];
+
   @override
   Stream<Float32List> get pcmStream => _controller.stream;
 
@@ -48,37 +59,54 @@ class WebAudioSource implements AudioSource {
     }
   }
 
-  /// 优先使用 USB 外接麦克风：先拿默认授权流，再枚举设备，
-  /// 若存在 USB 设备且当前用的不是它，则切换；切换失败回退默认
+  /// 判断设备 label 是否指向外接麦克风
+  bool _isExternalLabel(String label) {
+    final l = label.toLowerCase();
+    if (_builtinHints.any(l.contains)) return false;
+    return _externalHints.any(l.contains);
+  }
+
+  /// 优先使用外接麦克风：先拿默认授权流，再枚举设备，
+  /// 若存在外接设备（含 usb / 4-mic 等）且当前用的不是它，则切换；切换失败回退默认
   Future<web.MediaStream> _acquirePreferred() async {
     var stream = await _acquire(web.MediaStreamConstraints(audio: true.toJS));
     try {
-      final usbId = await _findUsbDeviceId();
-      if (usbId == null) return stream;
+      final preferredId = await _findPreferredDeviceId();
+      if (preferredId == null) return stream;
       final tracks = stream.getAudioTracks().toDart;
       final current = tracks.isEmpty ? null : tracks.first;
-      if (current != null && current.label.toLowerCase().contains('usb')) {
+      if (current != null && _isExternalLabel(current.label)) {
         return stream;
       }
-      final usbStream = await _acquire(web.MediaStreamConstraints(
-        audio: {'deviceId': {'exact': usbId}}.jsify()!,
+      final preferredStream = await _acquire(web.MediaStreamConstraints(
+        audio: {'deviceId': {'exact': preferredId}}.jsify()!,
       ));
       stream.getTracks().toDart.forEach((track) => track.stop());
-      return usbStream;
+      return preferredStream;
     } catch (_) {
       return stream;
     }
   }
 
-  Future<String?> _findUsbDeviceId() async {
+  Future<String?> _findPreferredDeviceId() async {
     try {
       final infos = (await web.window.navigator.mediaDevices
               .enumerateDevices()
               .toDart)
           .toDart;
-      for (final info in infos) {
-        if (info.kind == 'audioinput' &&
+      final audioInputs =
+          infos.where((info) => info.kind == 'audioinput').toList();
+      if (audioInputs.length < 2) return null;
+      // 1. 优先 USB 外接
+      for (final info in audioInputs) {
+        if (_isExternalLabel(info.label) &&
             info.label.toLowerCase().contains('usb')) {
+          return info.deviceId;
+        }
+      }
+      // 2. 其次其他外接特征（4-mic / 品牌名等）
+      for (final info in audioInputs) {
+        if (_isExternalLabel(info.label)) {
           return info.deviceId;
         }
       }
