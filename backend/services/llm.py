@@ -56,3 +56,40 @@ def chat_json(system: str, user: str, timeout: int = 40) -> dict:
         data = json.loads(resp.read().decode("utf-8"))
     content = data["choices"][0]["message"]["content"]
     return json.loads(content)
+
+
+def chat(
+    system: str,
+    user: str,
+    timeout: int = 120,
+    max_tokens: int = 4096,
+    temperature: float = 0.7,
+) -> str:
+    """调用 LLM 生成纯文本（长文/报告用）。出错时抛出异常由调用方处理。"""
+    key = llm_api_key()
+    if not key:
+        raise RuntimeError("USER_LLM_API_KEY 未配置")
+    base = os.environ.get("USER_LLM_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    model = os.environ.get("USER_LLM_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    url = base + "/chat/completions"
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {key}",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return data["choices"][0]["message"]["content"]

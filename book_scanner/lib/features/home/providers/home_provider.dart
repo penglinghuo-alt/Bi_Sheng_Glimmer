@@ -193,6 +193,23 @@ class HomeNotifier extends StateNotifier<HomeState> {
       );
       _lastSavedRecordId = record.id;
       _saveRecord(record);
+    } else if (state.selectedMode == PrintMode.textInput) {
+      final origin = state.selectedRecord;
+      if (origin != null) {
+        final record = BrailleRecord(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: origin.title,
+          sourceType: '文字输入',
+          dotMatrixWidth: 0,
+          dotMatrixHeight: 0,
+          dotMatrixData: [],
+          createdAt: DateTime.now(),
+          pageCount: _pageCount > 0 ? _pageCount : 1,
+          textContent: origin.textContent,
+        );
+        _lastSavedRecordId = record.id;
+        _saveRecord(record);
+      }
     }
     if (stopped) {
       _log('打印已紧急停止，共 $_pageCount 页');

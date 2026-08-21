@@ -19,6 +19,7 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   final ScrollController _logScrollCtrl = ScrollController();
+  final TextEditingController _textInputController = TextEditingController();
   String? _lastBoardState;
   int _lastProgressCurrent = -1;
   int _lastProgressTotal = -1;
@@ -26,6 +27,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void dispose() {
     _logScrollCtrl.dispose();
+    _textInputController.dispose();
     super.dispose();
   }
 
@@ -130,6 +132,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                   const SizedBox(height: 16),
                   _filePicker(theme, homeState),
                 ],
+                if (homeState.selectedMode == PrintMode.textInput && !isBusy && !isWorking) ...[
+                  const SizedBox(height: 16),
+                  _textInputArea(theme),
+                ],
                 const SizedBox(height: 24),
                 if (isBusy) _busyIndicator(theme, deviceState),
                 if (isConnected &&
@@ -218,6 +224,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Row(children: [
         Expanded(child: _modeTab(theme, homeState, '现场扫描', Icons.document_scanner_rounded, PrintMode.scanAndPrint, disabled)),
         Expanded(child: _modeTab(theme, homeState, '本地文件', Icons.folder_open_rounded, PrintMode.localFile, disabled)),
+        Expanded(child: _modeTab(theme, homeState, '文字输入', Icons.edit_note_rounded, PrintMode.textInput, disabled)),
       ]),
     );
   }
@@ -307,8 +314,39 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _selectedFileCard(ThemeData theme, BrailleRecord record) {
+  Widget _textInputArea(ThemeData theme) {
     return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text('输入要打印的文字', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+        ),
+        TextField(
+          controller: _textInputController,
+          maxLines: 5,
+          minLines: 3,
+          textInputAction: TextInputAction.newline,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(
+            hintText: '例如：愿每一个日子都充满阳光，生活温柔，岁月静好…',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text('当前 ${_textInputController.text.trim().length} 字', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+        ),
+      ]),
+    );
+  }
+
+  Widget _selectedFileCard(ThemeData theme, BrailleRecord record) {    return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withValues(alpha: 0.08),
@@ -421,7 +459,12 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _actionArea(ThemeData theme, HomeState homeState, DeviceState deviceState,
       bool isConnected, bool isBusy, bool isWorking) {
-    final canStart = (homeState.selectedMode == PrintMode.scanAndPrint || homeState.selectedRecord != null) && isConnected;
+    final canStart = isConnected &&
+        switch (homeState.selectedMode) {
+          PrintMode.scanAndPrint => true,
+          PrintMode.localFile => homeState.selectedRecord != null,
+          PrintMode.textInput => _textInputController.text.trim().isNotEmpty,
+        };
 
     return Column(children: [
       SizedBox(
@@ -443,8 +486,24 @@ class _HomePageState extends ConsumerState<HomePage> {
           onPressed: canStart
               ? () {
                   ref.read(homeProvider.notifier).startWorking();
-                  if (homeState.selectedMode == PrintMode.localFile) {
+                  final mode = homeState.selectedMode;
+                  if (mode == PrintMode.localFile) {
                     final text = homeState.selectedRecord?.textContent ?? '';
+                    ref.read(deviceProvider.notifier).startPrintWithText(text);
+                  } else if (mode == PrintMode.textInput) {
+                    final text = _textInputController.text.trim();
+                    final record = BrailleRecord(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      title: '文字输入_${text.length > 16 ? text.substring(0, 16) : text}',
+                      sourceType: '文字输入',
+                      dotMatrixWidth: 0,
+                      dotMatrixHeight: 0,
+                      dotMatrixData: [],
+                      createdAt: DateTime.now(),
+                      pageCount: 1,
+                      textContent: text,
+                    );
+                    ref.read(homeProvider.notifier).selectRecord(record);
                     ref.read(deviceProvider.notifier).startPrintWithText(text);
                   } else {
                     ref.read(deviceProvider.notifier).startPrintJob();
@@ -549,7 +608,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (!mounted) return;
       final home = ref.read(homeProvider);
       final stopped = home.currentStep == PrintStep.stopped;
-      final saved = home.selectedMode == PrintMode.scanAndPrint;
+      final saved = home.selectedMode == PrintMode.scanAndPrint ||
+          home.selectedMode == PrintMode.textInput;
       final title = stopped ? '打印已紧急停止' : '打印完成';
       final message = stopped
           ? (saved ? '任务已紧急停止\n打印内容已保存至存储库' : '任务已紧急停止')

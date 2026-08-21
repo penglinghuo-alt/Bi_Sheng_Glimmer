@@ -11,7 +11,7 @@ enum DeviceStatus {
   error,
 }
 
-enum PrintMode { scanAndPrint, localFile }
+enum PrintMode { scanAndPrint, localFile, textInput }
 
 enum PrintStep {
   idle,

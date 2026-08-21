@@ -201,6 +201,18 @@ class ApiClient {
     return res.data;
   }
 
+  // ─── AI 盲文报告 ────────────────────────────────
+
+  /// 根据主题让 AI 生成结构化报告（生成长文耗时，超时放宽）
+  Future<Map<String, dynamic>> fetchAiReport(String topic, {String extra = ''}) async {
+    final res = await _dio.post(
+      '/api/ai/report',
+      data: {'topic': topic, 'extra': extra},
+      options: Options(receiveTimeout: const Duration(seconds: 150)),
+    );
+    return res.data;
+  }
+
   // ─── Logs ────────────────────────────────────────
 
   Future<Map<String, dynamic>> getLogs({String? deviceId, int limit = 50}) async {

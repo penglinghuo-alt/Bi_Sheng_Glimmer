@@ -16,6 +16,7 @@ import '../../features/showcase/view/publish_page.dart';
 import '../../features/showcase/view/favorites_page.dart';
 import '../../features/news/view/news_page.dart';
 import '../../features/news/view/news_detail_page.dart';
+import '../../features/ai_report/view/ai_report_page.dart';
 import '../../features/voice/view/voice_page.dart';
 
 final authRedirectNotifier = ValueNotifier<bool>(false);
@@ -75,6 +76,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RouteNames.voice,
             builder: (_, state) => const VoicePage(),
+          ),
+          GoRoute(
+            path: RouteNames.aiReport,
+            builder: (_, state) => const AiReportPage(),
           ),
           GoRoute(
             path: RouteNames.profile,

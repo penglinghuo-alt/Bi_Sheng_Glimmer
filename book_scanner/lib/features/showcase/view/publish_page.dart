@@ -7,6 +7,7 @@ import '../../../data/models/post_comment.dart';
 import '../../../data/models/showcase_post.dart';
 import '../providers/publish_provider.dart';
 import '../providers/showcase_provider.dart';
+import '../widgets/voice_input_sheet.dart';
 
 class PublishPage extends ConsumerStatefulWidget {
   final String? initialRecordId;
@@ -80,15 +81,25 @@ class _PublishPageState extends ConsumerState<PublishPage> {
               ],
               Text('描述', style: theme.textTheme.titleSmall),
               const SizedBox(height: 8),
-              TextField(
-                controller: _descriptionController,
-                maxLength: 500,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: '写点什么介绍这条记录（最多 500 字）',
-                  alignLabelWithHint: true,
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  child: TextField(
+                    controller: _descriptionController,
+                    maxLength: 500,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      hintText: '写点什么介绍这条记录（最多 500 字）',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: '语音输入描述',
+                  onPressed: _openVoiceInput,
+                  icon: const Icon(Icons.mic_rounded),
+                ),
+              ]),
               const SizedBox(height: 16),
               if (state.error != null)
                 Padding(
@@ -268,6 +279,18 @@ class _PublishPageState extends ConsumerState<PublishPage> {
       _localFileName = name;
       _localFileContent = content;
     });
+  }
+
+  Future<void> _openVoiceInput() async {
+    final text = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => const VoiceInputSheet(),
+    );
+    if (text != null && text.trim().isNotEmpty && mounted) {
+      _descriptionController.text = text.trim();
+    }
   }
 
   Future<void> _publish() async {

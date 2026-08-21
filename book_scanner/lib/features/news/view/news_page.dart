@@ -37,6 +37,14 @@ class _NewsPageState extends ConsumerState<NewsPage> {
         centerTitle: false,
         actions: [
           Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: IconButton(
+              tooltip: 'AI 盲文报告',
+              onPressed: () => context.push(RouteNames.aiReport),
+              icon: const Icon(Icons.auto_awesome_rounded),
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Center(
               child: Container(
