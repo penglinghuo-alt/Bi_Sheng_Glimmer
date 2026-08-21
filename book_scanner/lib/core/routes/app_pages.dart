@@ -17,6 +17,7 @@ import '../../features/showcase/view/favorites_page.dart';
 import '../../features/news/view/news_page.dart';
 import '../../features/news/view/news_detail_page.dart';
 import '../../features/ai_report/view/ai_report_page.dart';
+import '../../features/ai_report/providers/ai_report_provider.dart';
 import '../../features/voice/view/voice_page.dart';
 
 final authRedirectNotifier = ValueNotifier<bool>(false);
@@ -127,12 +128,12 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class _AppShell extends StatelessWidget {
+class _AppShell extends ConsumerWidget {
   final Widget child;
   const _AppShell({required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final loc = GoRouterState.of(context).uri.toString();
 
@@ -147,7 +148,21 @@ class _AppShell extends StatelessWidget {
           ),
           child: Row(children: [
             Expanded(child: _navItem(Icons.home_rounded, Icons.home_outlined, '首页', RouteNames.showcase, loc, context)),
-            Expanded(child: _navItem(Icons.article_rounded, Icons.article_outlined, '新闻', RouteNames.news, loc, context)),
+            Expanded(
+              child: _navItem(
+                Icons.article_rounded,
+                Icons.article_outlined,
+                '新闻',
+                RouteNames.news,
+                loc,
+                context,
+                activeRoutes: [RouteNames.aiReport],
+                onTapOverride: () {
+                  final aiActive = ref.read(aiReportProvider).active;
+                  context.go(aiActive ? RouteNames.aiReport : RouteNames.news);
+                },
+              ),
+            ),
             Expanded(child: _navItem(Icons.print_rounded, Icons.print_outlined, '打印', RouteNames.home, loc, context)),
             Expanded(child: _navItem(Icons.storage_rounded, Icons.storage_outlined, '存储库', RouteNames.repository, loc, context)),
             Expanded(child: _navItem(Icons.person_rounded, Icons.person_outlined, '我的', RouteNames.profile, loc, context)),
@@ -157,13 +172,14 @@ class _AppShell extends StatelessWidget {
     );
   }
 
-  Widget _navItem(IconData filled, IconData outlined, String label, String route, String currentLoc, BuildContext context) {
-    final isActive = currentLoc == route;
+  Widget _navItem(IconData filled, IconData outlined, String label, String route, String currentLoc, BuildContext context,
+      {List<String> activeRoutes = const [], VoidCallback? onTapOverride}) {
+    final isActive = currentLoc == route || activeRoutes.contains(currentLoc);
     final color = isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45);
     return Semantics(
       button: true, label: label,
       child: InkWell(
-        onTap: isActive ? null : () => context.go(route),
+        onTap: isActive ? null : (onTapOverride ?? () => context.go(route)),
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
