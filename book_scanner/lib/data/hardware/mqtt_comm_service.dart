@@ -28,6 +28,10 @@ class MqttCommService implements IHardwareComm {
 
   int get _port => kIsWeb ? 8083 : HardwareConfig.mqttPort;
 
+  /// web 端与 app 端使用不同 clientId，避免 MQTT 相同 clientId 互踢
+  String get _clientId =>
+      kIsWeb ? '${HardwareConfig.mqttClientId}_web' : HardwareConfig.mqttClientId;
+
   @override
   Future<bool> connect(String brokerAddress) async {
     _disposed = false;
@@ -36,7 +40,7 @@ class MqttCommService implements IHardwareComm {
 
     final host = brokerAddress.isNotEmpty ? brokerAddress : HardwareConfig.mqttBrokerHost;
 
-    _client = createMqttClient(host, HardwareConfig.mqttClientId, _port);
+    _client = createMqttClient(host, _clientId, _port);
 
     _client!.logging(on: false);
     _client!.keepAlivePeriod = HardwareConfig.keepAlivePeriod;
@@ -46,7 +50,7 @@ class MqttCommService implements IHardwareComm {
     _client!.onSubscribed = _onSubscribed;
 
     final connMsg = MqttConnectMessage()
-        .withClientIdentifier(HardwareConfig.mqttClientId)
+        .withClientIdentifier(_clientId)
         .startClean();
 
     _client!.connectionMessage = connMsg;
