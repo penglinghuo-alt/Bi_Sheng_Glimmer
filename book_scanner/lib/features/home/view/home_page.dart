@@ -538,15 +538,19 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _scrollToBottom() {
-    if (_logScrollCtrl.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!_logScrollCtrl.hasClients) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_logScrollCtrl.hasClients) return;
+      try {
         _logScrollCtrl.animateTo(
           _logScrollCtrl.position.maxScrollExtent,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
-      });
-    }
+      } catch (_) {
+        // ScrollController 可能在帧回调期间已 detach，忽略本次滚动
+      }
+    });
   }
 
   Widget _logPanel(ThemeData theme, HomeState state, bool isWorking) {
