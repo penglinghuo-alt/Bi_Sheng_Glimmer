@@ -17,12 +17,6 @@ class _VoicePageState extends ConsumerState<VoicePage> {
   void initState() {
     super.initState();
     ref.read(voiceProvider.notifier).init();
-    // 录音结束（无论成功/失败/出错）都释放按键锁，保证可再次按住重试
-    ref.listen(voiceProvider.select((s) => s.status), (prev, next) {
-      if (next != VoiceStatus.recording && next != VoiceStatus.starting) {
-        _pressed = false;
-      }
-    });
   }
 
   void _start() {
@@ -44,6 +38,13 @@ class _VoicePageState extends ConsumerState<VoicePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final state = ref.watch(voiceProvider);
+
+    // 录音结束（无论成功/失败/出错）都释放按键锁，保证可再次按住重试
+    ref.listen(voiceProvider.select((s) => s.status), (prev, next) {
+      if (next != VoiceStatus.recording && next != VoiceStatus.starting) {
+        _pressed = false;
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('语音输入')),
