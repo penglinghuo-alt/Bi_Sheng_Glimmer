@@ -43,6 +43,11 @@ dependencies:
   record: ^7.1.1
   web: ^1.1.1
 
+# flutter_plugin_android_lifecycle 2.0.35 编译于 android-36，而 file_picker 8.3.7 硬编码 compileSdk 34，
+# 触发 checkDebugAarMetadata 失败。锁定到 2.0.24（compileSdk 34），与 file_picker 8.3.7 匹配。
+dependency_overrides:
+  flutter_plugin_android_lifecycle: 2.0.24
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
